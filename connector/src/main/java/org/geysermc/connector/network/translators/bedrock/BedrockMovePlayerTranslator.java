@@ -26,6 +26,7 @@
 package org.geysermc.connector.network.translators.bedrock;
 
 import com.nukkitx.math.vector.Vector3d;
+import com.nukkitx.protocol.bedrock.data.EntityFlag;
 import org.geysermc.common.ChatColor;
 import org.geysermc.connector.entity.Entity;
 import org.geysermc.connector.entity.PlayerEntity;
@@ -39,6 +40,7 @@ import com.nukkitx.math.vector.Vector3f;
 import com.nukkitx.protocol.bedrock.packet.MoveEntityAbsolutePacket;
 import com.nukkitx.protocol.bedrock.packet.MovePlayerPacket;
 import com.nukkitx.protocol.bedrock.packet.SetEntityDataPacket;
+import org.geysermc.connector.network.translators.world.block.BlockTranslator;
 
 @Translator(packet = MovePlayerPacket.class)
 public class BedrockMovePlayerTranslator extends PacketTranslator<MovePlayerPacket> {
@@ -98,6 +100,21 @@ public class BedrockMovePlayerTranslator extends PacketTranslator<MovePlayerPack
         if (!colliding)
          */
         session.sendDownstreamPacket(playerPositionRotationPacket);
+
+        // Scaffolding needs to be checked per-move since it's a flag in Bedrock but Java does it client-side
+        if (session.getConnector().getConfig().isCacheChunks() && BlockTranslator.getJavaIdBlockMap().inverse().get(
+                session.getConnector().getWorldManager().getBlockAt(session, position.getFloorX(), position.getFloorY(), position.getFloorZ())).contains("scaffold")) {
+            if (session.isSneaking()) {
+                session.getPlayerEntity().getMetadata().getFlags().setFlag(EntityFlag.FALL_THROUGH_SCAFFOLDING, true);
+                session.getPlayerEntity().getMetadata().getFlags().setFlag(EntityFlag.OVER_SCAFFOLDING, true);
+            }
+            session.getPlayerEntity().getMetadata().getFlags().setFlag(EntityFlag.IN_SCAFFOLDING, true);
+            session.getPlayerEntity().updateBedrockMetadata(session);
+        } else if (session.getPlayerEntity().getMetadata().getFlags().getFlag(EntityFlag.IN_SCAFFOLDING)) {
+            session.getPlayerEntity().getMetadata().getFlags().setFlag(EntityFlag.IN_SCAFFOLDING, false);
+            session.getPlayerEntity().getMetadata().getFlags().setFlag(EntityFlag.FALL_THROUGH_SCAFFOLDING, false);
+            session.getPlayerEntity().updateBedrockMetadata(session);
+        }
     }
 
     public boolean isValidMove(GeyserSession session, MovePlayerPacket.Mode mode, Vector3f currentPosition, Vector3f newPosition) {
