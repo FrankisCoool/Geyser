@@ -115,6 +115,23 @@ public abstract class ItemTranslator {
                     translator.translateToJava(itemStack.getNbt(), javaItem);
                 }
             }
+
+            // Translate canBreak and canPlace properties which are not part of the Bedrock item's NBT
+            if (data.getCanBreak() != null && data.getCanBreak().length > 0) {
+                ListTag canBreak = new ListTag("CanDestroy");
+                for (int i = 0; i < data.getCanBreak().length; i++) {
+                    canBreak.add(new StringTag("minecraft:" + data.getCanBreak()[i]));
+                }
+                itemStack.getNbt().put(canBreak);
+            }
+
+            if (data.getCanPlace() != null && data.getCanPlace().length > 0) {
+                ListTag canPlaceOn = new ListTag("CanPlaceOn");
+                for (int i = 0; i < data.getCanPlace().length; i++) {
+                    canPlaceOn.add(new StringTag("minecraft:" + data.getCanPlace()[i]));
+                }
+                itemStack.getNbt().put(canPlaceOn);
+            }
         }
         return itemStack;
     }
@@ -169,6 +186,28 @@ public abstract class ItemTranslator {
                     itemData = ItemData.of(itemData.getId(), itemData.getDamage(), itemData.getCount(), builder.buildRootTag());
                 }
             }
+
+            List<com.nukkitx.nbt.tag.StringTag> canDestroy = tag.getList("CanDestroy", com.nukkitx.nbt.tag.StringTag.class);
+            String[] canBreak = new String[0];
+            List<com.nukkitx.nbt.tag.StringTag> canPlaceOn = tag.getList("CanPlaceOn", com.nukkitx.nbt.tag.StringTag.class);
+            String[] canPlace = new String[0];
+            CompoundTagBuilder newTag = itemData.getTag().toBuilder();
+            if (canDestroy != null && canDestroy.size() > 0) {
+                canBreak = new String[canDestroy.size()];
+                for (int i = 0; i < canBreak.length; i++) {
+                    canBreak[i] = canDestroy.get(i).getValue().replace("minecraft:", "");
+                }
+                newTag.remove("CanDestroy");
+            }
+            if (canPlaceOn != null && canPlaceOn.size() > 0) {
+                canPlace = new String[canPlaceOn.size()];
+                for (int i = 0; i < canPlace.length; i++) {
+                    canPlace[i] = canPlaceOn.get(i).getValue().replace("minecraft:", "");
+                }
+                newTag.remove("CanPlaceOn");
+            }
+            itemData = ItemData.of(itemData.getId(), itemData.getDamage(), itemData.getCount(), newTag.buildRootTag(), canPlace, canBreak);
+            System.out.println(itemData);
         }
 
         return itemData;
