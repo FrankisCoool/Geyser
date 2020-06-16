@@ -26,12 +26,16 @@
 
 package org.geysermc.connector.network.translators;
 
+import com.nukkitx.nbt.CompoundTagBuilder;
 import com.nukkitx.nbt.NbtUtils;
 import com.nukkitx.nbt.stream.NBTInputStream;
 import com.nukkitx.nbt.tag.CompoundTag;
 import org.geysermc.connector.utils.FileUtils;
+import org.geysermc.connector.utils.ResourcePack;
 
 import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Registry for entity identifiers.
@@ -52,7 +56,30 @@ public class EntityIdentifierRegistry {
         InputStream stream = FileUtils.getResource("bedrock/entity_identifiers.dat");
 
         try (NBTInputStream nbtInputStream = NbtUtils.createNetworkReader(stream)) {
-            ENTITY_IDENTIFIERS = (CompoundTag) nbtInputStream.readTag();
+
+            if (ResourcePack.LOAD_JAVA_PACK) {
+                CompoundTag entIdentifiers = (CompoundTag) nbtInputStream.readTag();
+                CompoundTagBuilder entIdentifiersBuilder = entIdentifiers.toBuilder();
+                List<CompoundTag> idlist = new ArrayList<>();
+                idlist.addAll((List<CompoundTag>) entIdentifiers.get("idlist").getValue());
+
+                // Create the custom illusioner entry
+                CompoundTagBuilder illusionerBuilder = CompoundTag.builder();
+                illusionerBuilder.byteTag("hasspawnegg", (byte) 1);
+                illusionerBuilder.byteTag("experimental", (byte) 0);
+                illusionerBuilder.byteTag("summonable", (byte) 0);
+                illusionerBuilder.stringTag("id", "geyser:illusioner");
+                illusionerBuilder.stringTag("bid", "");
+                illusionerBuilder.intTag("rid", 200);
+
+                idlist.add(illusionerBuilder.buildRootTag());
+
+                entIdentifiersBuilder.listTag("idlist", CompoundTag.class, idlist);
+
+                ENTITY_IDENTIFIERS = entIdentifiersBuilder.buildRootTag();
+            } else {
+                ENTITY_IDENTIFIERS = (CompoundTag) nbtInputStream.readTag();
+            }
         } catch (Exception e) {
             throw new AssertionError("Unable to get entities from entity identifiers", e);
         }

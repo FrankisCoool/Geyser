@@ -1,0 +1,35 @@
+{
+   "content" : [
+      {
+         "path" : "animation_controllers/illusioner.animation_controllers.json"
+      },
+      {
+         "path" : "animations/illusioner.animation.json"
+      },
+      {
+         "path" : "entity/illusioner.entity.json"
+      },
+      {
+         "path" : "contents.json"
+      },
+      {
+         "path" : "textures/entity/illusioner.png"
+      },
+      {
+         "path" : "pack_icon.png"
+      },
+      {
+         "path" : "manifest.json"
+      },
+      {
+         "path" : "render_controllers/illusioner.render_controllers.json"
+      },
+	  {
+         "path" : "models/entity/illusioner.geo.json"
+      },
+      {
+         "path": "font/default8.png"
+      }
+   ],
+   "version" : 1
+}

@@ -34,8 +34,10 @@ import org.geysermc.connector.entity.living.animal.tameable.*;
 import org.geysermc.connector.entity.living.merchant.*;
 import org.geysermc.connector.entity.living.monster.*;
 import org.geysermc.connector.entity.living.monster.raid.AbstractIllagerEntity;
+import org.geysermc.connector.entity.living.monster.raid.IllusionerEntityType;
 import org.geysermc.connector.entity.living.monster.raid.RaidParticipantEntity;
 import org.geysermc.connector.entity.living.monster.raid.SpellcasterIllagerEntity;
+import org.geysermc.connector.utils.ResourcePack;
 
 @Getter
 public enum EntityType {
@@ -158,9 +160,10 @@ public enum EntityType {
     ITEM_FRAME(ItemFrameEntity.class, 0, 0, 0),
 
     /**
-     * Not an entity in Bedrock, so we replace it with a Pillager
+     * Not an entity in Bedrock, so we replace it with a Pillager if the Java resource pack is not loaded
      */
-    ILLUSIONER(AbstractIllagerEntity.class, 114, 1.8f, 0.6f, 0.6f, 1.62f, "minecraft:pillager");
+    ILLUSIONER(SpellcasterIllagerEntity.class, (ResourcePack.LOAD_JAVA_PACK ? 200 : 114), 1.8f, 0.6f, 0.6f, 1.62f,
+            (ResourcePack.LOAD_JAVA_PACK ? "geyser:illusioner" : "minecraft:pillager"));
 
     private static final EntityType[] VALUES = values();
 

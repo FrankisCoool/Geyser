@@ -28,19 +28,30 @@ package org.geysermc.connector.utils;
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import org.geysermc.connector.GeyserConnector;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.security.MessageDigest;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
 import java.util.function.Function;
+import java.util.zip.ZipFile;
 
 public class FileUtils {
+
+    public static final Map<String, Asset> ASSET_MAP = new HashMap<>();
+
+    private static String clientJarURL = "";
+
+    static {
+        generateAssetCache();
+    }
 
     /**
      * Load the given YAML file into the given class
@@ -170,5 +181,152 @@ public class FileUtils {
         }
 
         return sha256;
+    }
+
+    public static void copyFolder(File source, File destination)
+    {
+        if (source.isDirectory()) {
+            if (!destination.exists()) {
+                destination.mkdirs();
+            }
+
+            String files[] = source.list();
+
+            if (files != null) {
+                for (String file : files) {
+                    File srcFile = new File(source, file);
+                    File destFile = new File(destination, file);
+                    copyFolder(srcFile, destFile);
+                }
+            }
+        }
+        else {
+            InputStream in;
+            OutputStream out;
+
+            try {
+                in = new FileInputStream(source);
+                out = new FileOutputStream(destination);
+
+                byte[] buffer = new byte[1024];
+
+                int length;
+                while ((length = in.read(buffer)) > 0) {
+                    out.write(buffer, 0, length);
+                }
+            }
+            catch (IOException e) {
+                throw new RuntimeException("Unable to copy folder!", e);
+            }
+        }
+    }
+
+    /**
+     * Fetch the latest versions asset cache from Mojang so we can grab the locale files later
+     */
+    private static void generateAssetCache() {
+        try {
+            // Get the version manifest from Mojang
+            VersionManifest versionManifest = GeyserConnector.JSON_MAPPER.readValue(WebUtils.getBody("https://launchermeta.mojang.com/mc/game/version_manifest.json"), VersionManifest.class);
+
+            // Get the url for the latest version of the games manifest
+            String latestInfoURL = "";
+            for (Version version : versionManifest.getVersions()) {
+                if (version.getId().equals(versionManifest.getLatestVersion().getRelease())) {
+                    latestInfoURL = version.getUrl();
+                    break;
+                }
+            }
+
+            // Make sure we definitely got a version
+            if (latestInfoURL.isEmpty()) {
+                throw new Exception("Unable to get latest Minecraft version");
+            }
+
+            // Get the individual version manifest
+            VersionInfo versionInfo = GeyserConnector.JSON_MAPPER.readValue(WebUtils.getBody(latestInfoURL), VersionInfo.class);
+
+            // Get the smallest jar for use when downloading the en_us locale, will be either the server or client
+            for (VersionDownload download : versionInfo.getDownloads().values()) {
+                if (download.getUrl().endsWith("client.jar")) {
+                    clientJarURL = download.getUrl();
+                }
+            }
+
+            // Get the assets list
+            JsonNode assets = GeyserConnector.JSON_MAPPER.readTree(WebUtils.getBody(versionInfo.getAssetIndex().getUrl())).get("objects");
+
+            // Put each asset into an array for use later
+            Iterator<Map.Entry<String, JsonNode>> assetIterator = assets.fields();
+            while (assetIterator.hasNext()) {
+                Map.Entry<String, JsonNode> entry = assetIterator.next();
+                Asset asset = GeyserConnector.JSON_MAPPER.treeToValue(entry.getValue(), Asset.class);
+                ASSET_MAP.put(entry.getKey(), asset);
+            }
+
+            //downloadClientJar();
+
+        } catch (Exception e) {
+            GeyserConnector.getInstance().getLogger().info("Failed to load asset cache: " + (!e.getMessage().isEmpty() ? e.getMessage() : e.getStackTrace()));
+        }
+    }
+
+    /**
+     * Download then en_us locale by downloading the server jar and extracting it from there.
+     */
+    public static void downloadClientJar() {
+        if (new File("tmp_client.jar").exists()) return;
+        try {
+            // Let the user know we are downloading the JAR
+            GeyserConnector.getInstance().getLogger().info("Downloading Minecraft JAR to extract en_us locale, please wait... (this may take some time depending on the speed of your internet connection)");
+            GeyserConnector.getInstance().getLogger().debug("Download URL: " + clientJarURL);
+
+            // Download the client jar to get language files and assets
+            WebUtils.downloadFile(clientJarURL, "tmp_client.jar");
+
+//            if (!ResourcePack.LOAD_JAVA_PACK) {
+//                // Delete the nolonger needed client/server jar
+//                Files.delete(Paths.get("tmp_client.jar"));
+//            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new AssertionError("Unable to download and extract client jar!", e);
+        }
+    }
+
+    /**
+     * Retrieves a file from a downloaded client jar
+     * @param path
+     * @param output
+     */
+    public static void getFileFromClientJar(String path, File output) {
+        try {
+            if (!output.exists()) {
+                output.createNewFile();
+            }
+            // Load in the JAR as a zip and extract the file
+            ZipFile clientJar = new ZipFile("tmp_client.jar");
+
+            InputStream inputStream = clientJar.getInputStream(clientJar.getEntry(path));
+            FileOutputStream outputStream = new FileOutputStream(output);
+
+            // Write the file to the locale dir
+            int data = inputStream.read();
+            while (data != -1) {
+                outputStream.write(data);
+                data = inputStream.read();
+            }
+
+            // Flush all changes to disk and cleanup
+            outputStream.flush();
+            outputStream.close();
+
+            inputStream.close();
+
+            clientJar.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+            throw new AssertionError("Unable to download and extract file from jar!", e);
+        }
     }
 }

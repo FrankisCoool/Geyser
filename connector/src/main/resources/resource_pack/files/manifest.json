@@ -1,0 +1,18 @@
+{
+  "format_version": 2,
+  "header": {
+    "description": "Geyser Java Textures",
+    "name": "Geyser Java Textures",
+    "uuid": "b94a6163-936c-4889-a424-25cb3cca0dac",
+    "version": [0, 0, 1],
+	"min_engine_version": [1, 14, 0]
+  },
+  "modules": [
+    {
+      "description": "Geyser Java Textures",
+      "type": "resources",
+      "uuid": "d1068dfa-0128-47a4-8e9a-a60ffd74244c",
+      "version": [0, 0, 1]
+    }
+  ]
+}

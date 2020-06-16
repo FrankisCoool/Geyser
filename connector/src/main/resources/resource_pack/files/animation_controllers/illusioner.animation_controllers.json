@@ -1,0 +1,64 @@
+{
+	"format_version" : "1.10.0",
+	"animation_controllers" : {
+		"controller.animation.illusioner.general" : {
+			"initial_state" : "default",
+			"states" : {
+				"default" : {
+					"animations" : [
+						"general",
+						{
+							"look_at_target" : "!query.is_sleeping"
+						}
+					]
+				}
+			}
+		},
+		"controller.animation.illusioner.move" : {
+			"initial_state" : "default",
+			"states" : {
+				"default" : {
+					"animations" : [
+						{
+							"move" : "query.modified_move_speed"
+						}
+					],
+					"transitions" : [
+						{
+							"get_in_bed" : "query.is_sleeping"
+						}
+					]
+				},
+				"get_in_bed" : {
+					"animations" : [ "get_in_bed" ],
+					"transitions" : [
+						{
+							"default" : "!query.is_sleeping"
+						}
+					]
+				}
+			}
+		},
+		"controller.animation.illusioner.raise_arms" : {
+			"initial_state" : "default",
+			"states" : {
+				"default" : {
+					"transitions" : [
+						{
+							"raising" : "variable.raise_arms > 0.0"
+						}
+					]
+				},
+				"raising" : {
+					"animations" : [ "raise_arms" ],
+					"transitions" : [
+						{
+							"default" : "variable.raise_arms == 0.0"
+						}
+					]
+				}
+			}
+		}
+	}
+}
+

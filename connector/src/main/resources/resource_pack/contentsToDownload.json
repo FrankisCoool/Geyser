@@ -1,0 +1,12 @@
+{
+  "ASCII font": {
+    "source": "assets/minecraft/textures/font/ascii.png",
+    "destinationDirectory": "fonts",
+    "destinationFileName": "default8.png"
+  },
+  "Illusioner Texture": {
+    "source": "assets/minecraft/textures/entity/illager/illusioner.png",
+    "destinationDirectory": "textures/entity",
+    "destinationFileName": "illusioner.png"
+  }
+}
