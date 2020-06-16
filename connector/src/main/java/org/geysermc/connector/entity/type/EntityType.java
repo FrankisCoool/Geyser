@@ -34,7 +34,6 @@ import org.geysermc.connector.entity.living.animal.tameable.*;
 import org.geysermc.connector.entity.living.merchant.*;
 import org.geysermc.connector.entity.living.monster.*;
 import org.geysermc.connector.entity.living.monster.raid.AbstractIllagerEntity;
-import org.geysermc.connector.entity.living.monster.raid.IllusionerEntityType;
 import org.geysermc.connector.entity.living.monster.raid.RaidParticipantEntity;
 import org.geysermc.connector.entity.living.monster.raid.SpellcasterIllagerEntity;
 import org.geysermc.connector.utils.ResourcePack;
