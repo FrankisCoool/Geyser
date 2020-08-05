@@ -40,25 +40,22 @@ public class EnderDragonEntity extends InsentientEntity {
 
     public EnderDragonEntity(long entityId, long geyserId, EntityType entityType, Vector3f position, Vector3f motion, Vector3f rotation) {
         super(entityId, geyserId, entityType, position, motion, rotation);
+
+        metadata.getOrCreateFlags().setFlag(EntityFlag.FIRE_IMMUNE, true);
     }
 
     @Override
     public void updateBedrockMetadata(EntityMetadata entityMetadata, GeyserSession session) {
         if (entityMetadata.getId() == 15) {
-            metadata.getFlags().setFlag(EntityFlag.FIRE_IMMUNE, true);
-            switch ((int) entityMetadata.getValue()) {
-                // Performing breath attack
-                case 5:
-                    EntityEventPacket entityEventPacket = new EntityEventPacket();
-                    entityEventPacket.setType(EntityEventType.DRAGON_FLAMING);
-                    entityEventPacket.setRuntimeEntityId(geyserId);
-                    entityEventPacket.setData(0);
-                    session.sendUpstreamPacket(entityEventPacket);
-                case 6:
-                case 7:
-                    metadata.getFlags().setFlag(EntityFlag.SITTING, true);
-                    break;
+            // Performing breath attack
+            if ((int) entityMetadata.getValue() == 5) {
+                EntityEventPacket entityEventPacket = new EntityEventPacket();
+                entityEventPacket.setType(EntityEventType.DRAGON_FLAMING);
+                entityEventPacket.setRuntimeEntityId(geyserId);
+                entityEventPacket.setData(0);
+                session.sendUpstreamPacket(entityEventPacket);
             }
+            metadata.getFlags().setFlag(EntityFlag.SITTING, (int) entityMetadata.getValue() == 6 || (int) entityMetadata.getValue() == 7);
         }
         super.updateBedrockMetadata(entityMetadata, session);
     }
@@ -66,7 +63,7 @@ public class EnderDragonEntity extends InsentientEntity {
     @Override
     public void spawnEntity(GeyserSession session) {
         AddEntityPacket addEntityPacket = new AddEntityPacket();
-        addEntityPacket.setIdentifier("minecraft:" + entityType.name().toLowerCase());
+        addEntityPacket.setIdentifier(entityType.getIdentifier());
         addEntityPacket.setRuntimeEntityId(geyserId);
         addEntityPacket.setUniqueEntityId(geyserId);
         addEntityPacket.setPosition(position);
