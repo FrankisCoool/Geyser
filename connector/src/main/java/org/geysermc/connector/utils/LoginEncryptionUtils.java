@@ -105,7 +105,7 @@ public class LoginEncryptionUtils {
 
             connector.getLogger().debug(String.format("Is player data valid? %s", validChain));
 
-            if (!validChain) {
+            if (!validChain && session.getConnector().getConfig().isCheckXboxAuth()) {
                 session.disconnect(LanguageUtils.getLocaleStringLog("geyser.auth.login.form.notice.desc"));
                 return;
             }

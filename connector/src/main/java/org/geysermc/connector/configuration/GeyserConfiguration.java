@@ -120,6 +120,8 @@ public interface GeyserConfiguration {
         String getUniqueId();
     }
 
+    boolean isCheckXboxAuth();
+
     int getMtu();
 
     int getConfigVersion();

@@ -259,6 +259,11 @@ public class GeyserSpongeConfiguration implements GeyserConfiguration {
     }
 
     @Override
+    public boolean isCheckXboxAuth() {
+        return node.getNode("check-xbox-auth").getBoolean(true);
+    }
+
+    @Override
     public int getMtu() {
         return node.getNode("mtu").getInt(1400);
     }

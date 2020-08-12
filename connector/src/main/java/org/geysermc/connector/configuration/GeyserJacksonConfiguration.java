@@ -141,6 +141,9 @@ public abstract class GeyserJacksonConfiguration implements GeyserConfiguration 
         private String uniqueId;
     }
 
+    @JsonProperty("check-xbox-auth")
+    private boolean checkXboxAuth = true;
+
     @JsonProperty("mtu")
     private int mtu = 1400;
 
