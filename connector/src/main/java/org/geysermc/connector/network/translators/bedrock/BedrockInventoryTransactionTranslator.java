@@ -39,14 +39,17 @@ import com.github.steveice10.mc.protocol.packet.ingame.client.player.ClientPlaye
 import com.nukkitx.math.vector.Vector3f;
 import com.nukkitx.math.vector.Vector3i;
 import com.nukkitx.protocol.bedrock.data.LevelEventType;
+import com.nukkitx.protocol.bedrock.data.entity.EntityFlag;
 import com.nukkitx.protocol.bedrock.data.inventory.ContainerType;
 import com.nukkitx.protocol.bedrock.packet.ContainerOpenPacket;
 import com.nukkitx.protocol.bedrock.packet.InventoryTransactionPacket;
 import com.nukkitx.protocol.bedrock.packet.LevelEventPacket;
+import com.nukkitx.protocol.bedrock.packet.UpdateBlockPacket;
 import org.geysermc.connector.entity.CommandBlockMinecartEntity;
 import org.geysermc.connector.entity.Entity;
 import org.geysermc.connector.entity.ItemFrameEntity;
 import org.geysermc.connector.entity.living.merchant.AbstractMerchantEntity;
+import org.geysermc.connector.entity.type.EntityType;
 import org.geysermc.connector.inventory.Inventory;
 import org.geysermc.connector.network.session.GeyserSession;
 import org.geysermc.connector.network.translators.PacketTranslator;
@@ -58,6 +61,10 @@ import org.geysermc.connector.network.translators.sound.EntitySoundInteractionHa
 import org.geysermc.connector.network.translators.world.block.BlockTranslator;
 import org.geysermc.connector.utils.InventoryUtils;
 
+/**
+ * BedrockInventoryTransactionTranslator handles most interactions between the client and the world,
+ * or the client and their inventory.
+ */
 @Translator(packet = InventoryTransactionPacket.class)
 public class BedrockInventoryTransactionTranslator extends PacketTranslator<InventoryTransactionPacket> {
 
@@ -78,6 +85,43 @@ public class BedrockInventoryTransactionTranslator extends PacketTranslator<Inve
             case ITEM_USE:
                 switch (packet.getActionType()) {
                     case 0:
+                        System.out.println(packet);
+                        Vector3i blockPos = packet.getBlockPosition();
+                        // TODO: Find a better way to do this?
+                        switch (packet.getBlockFace()) {
+                            case 0:
+                                blockPos = blockPos.sub(0, 1, 0);
+                                break;
+                            case 1:
+                                blockPos = blockPos.add(0, 1, 0);
+                                break;
+                            case 2:
+                                blockPos = blockPos.sub(0, 0, 1);
+                                break;
+                            case 3:
+                                blockPos = blockPos.add(0, 0, 1);
+                                break;
+                            case 4:
+                                blockPos = blockPos.sub(1, 0, 0);
+                                break;
+                            case 5:
+                                blockPos = blockPos.add(1, 0, 0);
+                                break;
+                        }
+
+                        boolean isValidInteraction = isValidInteraction(session, blockPos);
+                        if (!isValidInteraction && session.getConnector().getConfig().isCacheChunks()) {
+                            int cachedBlock = BlockTranslator.getBedrockBlockId(session.getConnector().getWorldManager().getBlockAt(session, blockPos));
+                            if (packet.getBlockRuntimeId() != cachedBlock) {
+                                // The block the player sent is invalid, revert it.
+                                UpdateBlockPacket updateBlockPacket = new UpdateBlockPacket();
+                                updateBlockPacket.setBlockPosition(blockPos);
+                                updateBlockPacket.setDataLayer(0);
+                                updateBlockPacket.setRuntimeId(cachedBlock);
+                                session.sendUpstreamPacket(updateBlockPacket);
+                            }
+                        }
+                        if (!isValidInteraction) break;
 
                         // Bedrock sends block interact code for a Java entity so we send entity code back to Java
                         if (BlockTranslator.isItemFrame(packet.getBlockRuntimeId()) &&
@@ -126,28 +170,6 @@ public class BedrockInventoryTransactionTranslator extends PacketTranslator<Inve
                             }
                         }
 
-                        Vector3i blockPos = packet.getBlockPosition();
-                        // TODO: Find a better way to do this?
-                        switch (packet.getBlockFace()) {
-                            case 0:
-                                blockPos = blockPos.sub(0, 1, 0);
-                                break;
-                            case 1:
-                                blockPos = blockPos.add(0, 1, 0);
-                                break;
-                            case 2:
-                                blockPos = blockPos.sub(0, 0, 1);
-                                break;
-                            case 3:
-                                blockPos = blockPos.add(0, 0, 1);
-                                break;
-                            case 4:
-                                blockPos = blockPos.sub(1, 0, 0);
-                                break;
-                            case 5:
-                                blockPos = blockPos.add(1, 0, 0);
-                                break;
-                        }
                         ItemEntry handItem = ItemRegistry.getItem(packet.getItemInHand());
                         if (handItem.isBlock()) {
                             session.setLastBlockPlacePosition(blockPos);
@@ -174,7 +196,18 @@ public class BedrockInventoryTransactionTranslator extends PacketTranslator<Inve
                         session.setLastInteractionPosition(packet.getBlockPosition());
                         break;
                     case 2:
-                        int blockState = session.getConnector().getWorldManager().getBlockAt(session, packet.getBlockPosition().getX(), packet.getBlockPosition().getY(), packet.getBlockPosition().getZ());
+                        boolean isValidBreakInteraction = isValidInteraction(session, packet.getBlockPosition());
+                        if (!isValidBreakInteraction && session.getConnector().getConfig().isCacheChunks()) {
+                            // Revert the broken block on the client's end
+                            int correctBlockState = session.getConnector().getWorldManager().getBlockAt(session, packet.getBlockPosition());
+                            UpdateBlockPacket updateBlockPacket = new UpdateBlockPacket();
+                            updateBlockPacket.setBlockPosition(packet.getBlockPosition());
+                            updateBlockPacket.setDataLayer(0);
+                            updateBlockPacket.setRuntimeId(BlockTranslator.getBedrockBlockId(correctBlockState));
+                            session.sendUpstreamPacket(updateBlockPacket);
+                        }
+                        if (!isValidBreakInteraction) break;
+                        int blockState = session.getConnector().getWorldManager().getBlockAt(session, packet.getBlockPosition());
                         double blockHardness = BlockTranslator.JAVA_RUNTIME_ID_TO_HARDNESS.get(blockState);
                         if (session.getGameMode() == GameMode.CREATIVE || (session.getConnector().getConfig().isCacheChunks() && blockHardness == 0)) {
                             session.setLastBlockPlacedId(null);
@@ -252,5 +285,46 @@ public class BedrockInventoryTransactionTranslator extends PacketTranslator<Inve
                 }
                 break;
         }
+    }
+
+    /**
+     * Determine if the current interaction is valid for a vanilla Java client
+     * <br>
+     * This is needed because mobile reach is insanely different.
+     * @param session the current Geyser session of the player
+     * @param position the position of the block
+     * @return true if the interaction would be valid in Java Edition.
+     */
+    private boolean isValidInteraction(GeyserSession session, Vector3i position) {
+        System.out.println("Block position: " + position);
+        Vector3f measuredPosition = position.toFloat().add(0.5, 0.5, 0.5);
+        // Determine the reach limit
+        float distanceLimit;
+        if (session.getGameMode() == GameMode.CREATIVE) {
+            distanceLimit = 5.6f;
+        } else {
+            distanceLimit = 5.2f;
+        }
+        float offset;
+        if (session.getPlayerEntity().getMetadata().getFlags().getFlag(EntityFlag.GLIDING) ||
+            session.getPlayerEntity().getMetadata().getFlags().getFlag(EntityFlag.SWIMMING)) {
+            offset = 0.4f;
+        } else if (session.getPlayerEntity().getMetadata().getFlags().getFlag(EntityFlag.SNEAKING)) {
+            offset = 1.27f;
+        } else {
+            offset = EntityType.PLAYER.getOffset();
+        }
+        Vector3f playerPosition = session.getPlayerEntity().getPosition().add(0, offset, 0);
+        float distance = playerPosition.distance(measuredPosition);
+        boolean valid = distance - distanceLimit <= 0;
+        System.out.println("Was interaction valid? " + valid + " distance " + (distance - distanceLimit));
+        return valid;
+//        Vector2f directionPlane = (Vector2f.from((float) (-Math.cos(Math.toRadians(session.getPlayerEntity().getRotation().getY())
+//                - Math.PI / 2)), (float) (-Math.sin(Math.toRadians(session.getPlayerEntity().getRotation().getY()) - Math.PI / 2)))).normalize();
+//        double dot = directionPlane.dot(Vector2f.from(session.getPlayerEntity().getPosition().getX(), session.getPlayerEntity().getPosition().getY()));
+//        double blockDot = directionPlane.dot(measuredPosition.getX(), measuredPosition.getZ());
+//        boolean valid = (blockDot - dot) >= -5.6f;
+//        System.out.println("Is valid? " + valid + " " + blockDot + " " + dot);
+//        return valid;
     }
 }
