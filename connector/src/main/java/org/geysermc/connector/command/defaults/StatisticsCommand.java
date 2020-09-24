@@ -25,20 +25,18 @@
 
 package org.geysermc.connector.command.defaults;
 
-import com.github.steveice10.mc.protocol.data.game.entity.metadata.Position;
-import com.github.steveice10.mc.protocol.data.game.entity.player.PlayerAction;
-import com.github.steveice10.mc.protocol.data.game.world.block.BlockFace;
-import com.github.steveice10.mc.protocol.packet.ingame.client.player.ClientPlayerActionPacket;
+import com.github.steveice10.mc.protocol.data.game.ClientRequest;
+import com.github.steveice10.mc.protocol.packet.ingame.client.ClientRequestPacket;
 import org.geysermc.connector.GeyserConnector;
 import org.geysermc.connector.command.CommandSender;
 import org.geysermc.connector.command.GeyserCommand;
 import org.geysermc.connector.network.session.GeyserSession;
 
-public class OffhandCommand extends GeyserCommand {
+public class StatisticsCommand extends GeyserCommand {
 
     private final GeyserConnector connector;
 
-    public OffhandCommand(GeyserConnector connector, String name, String description, String permission) {
+    public StatisticsCommand(GeyserConnector connector, String name, String description, String permission) {
         super(name, description, permission);
 
         this.connector = connector;
@@ -51,21 +49,20 @@ public class OffhandCommand extends GeyserCommand {
         }
 
         // Make sure the sender is a Bedrock edition client
+        GeyserSession session = null;
         if (sender instanceof GeyserSession) {
-            GeyserSession session = (GeyserSession) sender;
-            ClientPlayerActionPacket releaseItemPacket = new ClientPlayerActionPacket(PlayerAction.SWAP_HANDS, new Position(0,0,0),
-                    BlockFace.DOWN);
-            session.sendDownstreamPacket(releaseItemPacket);
-            return;
-        }
-        // Needed for Bukkit - sender is not an instance of GeyserSession
-        for (GeyserSession session : connector.getPlayers()) {
-            if (sender.getName().equals(session.getPlayerEntity().getUsername())) {
-                ClientPlayerActionPacket releaseItemPacket = new ClientPlayerActionPacket(PlayerAction.SWAP_HANDS, new Position(0,0,0),
-                        BlockFace.DOWN);
-                session.sendDownstreamPacket(releaseItemPacket);
-                break;
+            session = (GeyserSession) sender;
+        } else {
+            // Needed for Spigot - sender is not an instance of GeyserSession
+            for (GeyserSession geyserSession : connector.getPlayers()) {
+                if (sender.getName().equals(geyserSession.getPlayerEntity().getUsername())) {
+                    session = geyserSession;
+                    break;
+                }
             }
         }
+        if (session == null) return;
+        ClientRequestPacket packet = new ClientRequestPacket(ClientRequest.STATS);
+        session.sendDownstreamPacket(packet);
     }
 }
