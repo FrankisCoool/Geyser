@@ -53,6 +53,7 @@ public abstract class InventoryTranslator {
             put(WindowType.BREWING_STAND, new BrewingInventoryTranslator());
             put(WindowType.ANVIL, new AnvilInventoryTranslator());
             put(WindowType.CRAFTING, new CraftingInventoryTranslator());
+            put(WindowType.LECTERN, new LecternInventoryTranslator());
             put(WindowType.GRINDSTONE, new GrindstoneInventoryTranslator());
             put(WindowType.MERCHANT, new MerchantInventoryTranslator());
             put(WindowType.SMITHING, new SmithingInventoryTranslator());

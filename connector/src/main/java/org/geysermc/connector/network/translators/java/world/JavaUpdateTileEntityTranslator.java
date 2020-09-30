@@ -43,6 +43,7 @@ public class JavaUpdateTileEntityTranslator extends PacketTranslator<ServerUpdat
 
     @Override
     public void translate(ServerUpdateTileEntityPacket packet, GeyserSession session) {
+        System.out.println(packet.toString());
         String id = BlockEntityUtils.getBedrockBlockEntityId(packet.getType().name());
         if (packet.getNbt().isEmpty()) { // Fixes errors in CubeCraft sending empty NBT
             BlockEntityUtils.updateBlockEntity(session, null, packet.getPosition());

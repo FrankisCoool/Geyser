@@ -43,6 +43,7 @@ public class BlockStateValues {
     private static final Int2ObjectMap<DoubleChestValue> DOUBLE_CHEST_VALUES = new Int2ObjectOpenHashMap<>();
     private static final Int2ObjectMap<String> FLOWER_POT_VALUES = new Int2ObjectOpenHashMap<>();
     private static final Map<String, NbtMap> FLOWER_POT_BLOCKS = new HashMap<>();
+    private static final Int2BooleanMap LECTERN_VALUES = new Int2BooleanArrayMap();
     private static final Int2IntMap NOTEBLOCK_PITCHES = new Int2IntOpenHashMap();
     private static final Int2BooleanMap IS_STICKY_PISTON = new Int2BooleanOpenHashMap();
     private static final Int2BooleanMap PISTON_VALUES = new Int2BooleanOpenHashMap();
@@ -79,6 +80,11 @@ public class BlockStateValues {
                     (entry.getValue().get("z") != null && entry.getValue().get("z").asBoolean()));
             boolean isLeft = (entry.getValue().get("double_chest_position").asText().contains("left"));
             DOUBLE_CHEST_VALUES.put(javaBlockState, new DoubleChestValue(isX, isDirectionPositive, isLeft));
+            return;
+        }
+
+        if (entry.getKey().contains("lectern")) {
+            LECTERN_VALUES.put(javaBlockState, entry.getKey().contains("has_book=true"));
             return;
         }
 
@@ -177,6 +183,16 @@ public class BlockStateValues {
      */
     public static Map<String, NbtMap> getFlowerPotBlocks() {
         return FLOWER_POT_BLOCKS;
+    }
+
+    /**
+     * In Java Edition, the book portion of a lectern is controlled by the block state, whereas in Bedrock
+     * this is controlled through the block entity.
+     * TODO: Should we just pull from the BlockTranslator map? Might be more costly on performance
+     * @return the list of all lecterns and if they have books
+     */
+    public static Int2BooleanMap getLecternValues() {
+        return LECTERN_VALUES;
     }
 
     /**
