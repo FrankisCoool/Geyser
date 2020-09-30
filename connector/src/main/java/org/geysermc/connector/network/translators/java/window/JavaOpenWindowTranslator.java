@@ -43,7 +43,6 @@ public class JavaOpenWindowTranslator extends PacketTranslator<ServerOpenWindowP
 
     @Override
     public void translate(ServerOpenWindowPacket packet, GeyserSession session) {
-        session.getConnector().getLogger().warning(packet.toString());
         if (packet.getWindowId() == 0) {
             return;
         }

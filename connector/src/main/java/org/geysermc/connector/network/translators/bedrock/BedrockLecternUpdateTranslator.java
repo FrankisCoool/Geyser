@@ -25,6 +25,7 @@
 
 package org.geysermc.connector.network.translators.bedrock;
 
+import com.github.steveice10.mc.protocol.packet.ingame.client.window.ClientClickWindowButtonPacket;
 import com.nukkitx.protocol.bedrock.packet.LecternUpdatePacket;
 import org.geysermc.connector.network.session.GeyserSession;
 import org.geysermc.connector.network.translators.PacketTranslator;
@@ -37,45 +38,17 @@ public class BedrockLecternUpdateTranslator extends PacketTranslator<LecternUpda
     @Override
     public void translate(LecternUpdatePacket packet, GeyserSession session) {
         session.getConnector().getLogger().warning(packet.toString());
-        LecternUpdatePacket lecternPacket = new LecternUpdatePacket();
-        lecternPacket.setPage(packet.getPage());
-        lecternPacket.setTotalPages(packet.getTotalPages());
-        lecternPacket.setDroppingBook(packet.isDroppingBook());
-        lecternPacket.setBlockPosition(packet.getBlockPosition());
-        session.sendUpstreamPacket(packet);
-//        if (packet.getPage() == 0) {
-//            InventoryUtils.closeInventory(session, session.getInventoryCache().getOpenInventory().getId());
-//        }
-        if (packet.isDroppingBook()) {
-//            int windowId = session.getInventoryCache().getOpenInventory().getId();
-//            ClientClickWindowButtonPacket buttonPacket = new ClientClickWindowButtonPacket(windowId, 3);
-//            session.sendDownstreamPacket(buttonPacket);
-        }
-//        Vector3i position = session.getPlayerEntity().getPosition().toInt().add(Vector3i.UP);
-//        UpdateBlockPacket updateBlockPacket = new UpdateBlockPacket();
-//        updateBlockPacket.setDataLayer(0);
-//        updateBlockPacket.setRuntimeId(BlockTranslator.getBedrockBlockId(BlockTranslator.getJavaIdBlockMap().get("minecraft:lectern[facing=north,has_book=true,powered=false]")));
-//        updateBlockPacket.getFlags().addAll(UpdateBlockPacket.FLAG_ALL_PRIORITY);
-//        updateBlockPacket.setBlockPosition(position);
-//        session.sendUpstreamPacket(updateBlockPacket);
-//        NbtMapBuilder builder = NbtMap.builder()
-//                .putInt("x", position.getX())
-//                .putInt("y", position.getY())
-//                .putInt("z", position.getZ())
-//                .putString("id", "Lectern")
-//                .putByte("hasBook", (byte) 1)
-//                .putInt("page", 0) // Page appears to have to do with both pages
-//                .putInt("totalPages", 0) // Total pages appears to have to do with the total amount of pages per book half
-//                .putCompound("book", generateEmptyBook());
-//        BlockEntityUtils.updateBlockEntity(session, builder.build(), position);
-//        LecternUpdatePacket lecternPacket = new LecternUpdatePacket();
-//        lecternPacket.setPage(0);
-//        lecternPacket.setTotalPages(0);
-//        lecternPacket.setDroppingBook(false);
-//        lecternPacket.setBlockPosition(position);
-//        session.sendUpstreamPacket(lecternPacket);
-        if (session.getInventoryCache().getOpenInventory() != null) {
+
+        // Page = 0 means in most cases that the client wants to close the window
+        if (session.getInventoryCache().getOpenInventory() != null && packet.getPage() == 0) {
             InventoryUtils.closeInventory(session, session.getInventoryCache().getOpenInventory().getId());
+            session.setLecternBookPage(-1);
+        } else if (session.getInventoryCache().getOpenInventory() != null) {
+            ClientClickWindowButtonPacket buttonPacket = new ClientClickWindowButtonPacket(
+                    session.getInventoryCache().getOpenInventory().getId(),
+                    100 + session.getLecternBookPage());
+            session.sendDownstreamPacket(buttonPacket);
+            session.setLecternBookPage(packet.getPage());
         }
     }
 }

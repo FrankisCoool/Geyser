@@ -36,6 +36,7 @@ import org.geysermc.connector.network.session.GeyserSession;
 import org.geysermc.connector.network.translators.item.ItemTranslator;
 import org.geysermc.connector.utils.BlockEntityUtils;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -43,18 +44,25 @@ import java.util.List;
  */
 public class LecternInventoryTranslator extends InventoryTranslator {
 
+    private static final NbtMap EMPTY_PAGE = NbtMap.builder()
+            .putString("photoname", "")
+            .putString("text", "")
+            .build();
+
     public LecternInventoryTranslator() {
         super(0);
     }
 
     @Override
     public void prepareInventory(GeyserSession session, Inventory inventory) {
-
+        session.getConnector().getLogger().warning("Preparing inventory");
     }
 
     @Override
     public void openInventory(GeyserSession session, Inventory inventory) {
-
+        session.setLecternBookPage(0);
+        session.getConnector().getLogger().warning("Opening inventory");
+        updateBook(session, inventory);
     }
 
     @Override
@@ -64,53 +72,20 @@ public class LecternInventoryTranslator extends InventoryTranslator {
 
     @Override
     public void updateProperty(GeyserSession session, Inventory inventory, int key, int value) {
-
+        session.getConnector().getLogger().warning("Property " + key + " " + value);
+        updateBook(session, inventory);
     }
 
     @Override
     public void updateInventory(GeyserSession session, Inventory inventory) {
-        if (inventory.getItem(0) == null) return;
-        Vector3i lastInteractionPosition = session.getLastInteractionPosition();
-        ItemData item = ItemTranslator.translateToBedrock(session, inventory.getItem(0));
-        List<NbtMap> pages = item.getTag().getList("pages", NbtType.COMPOUND);
-        NbtMapBuilder builder = NbtMap.builder()
-                .putInt("x", lastInteractionPosition.getX())
-                .putInt("y", lastInteractionPosition.getY())
-                .putInt("z", lastInteractionPosition.getZ())
-                .putString("id", "Lectern")
-                .putByte("hasBook", (byte) 1)
-                .putInt("page", 0) // Page appears to have to do with both pages
-                .putInt("totalPages", pages.size()) // Total pages appears to have to do with the total amount of pages per book half
-                .putCompound("book", NbtMap.builder()
-                        .putByte("Count", (byte) item.getCount())
-                        .putShort("Damage", item.getDamage())
-                        .putString("Name", "minecraft:written_book") // It can't be anything else... right?
-                        .putCompound("tag", item.getTag()).build());
-        System.out.println(builder.build());
-        BlockEntityUtils.updateBlockEntity(session, builder.build(), lastInteractionPosition);
-//        UpdateBlockPacket updateBlockPacket = new UpdateBlockPacket();
-//        updateBlockPacket.setDataLayer(0);
-//        updateBlockPacket.setRuntimeId(BlockTranslator.getBedrockBlockId(session.getConnector().getWorldManager().getBlockAt(session, lastInteractionPosition)));
-//        updateBlockPacket.getFlags().addAll(UpdateBlockPacket.FLAG_ALL_PRIORITY);
-//        session.sendUpstreamPacket(updateBlockPacket);
-//        BlockEntityUtils.updateBlockEntity(session, builder.build(), lastInteractionPosition);
-//        session.sendUpstreamPacket(updateBlockPacket);
-//        BlockEntityUtils.updateBlockEntity(session, builder.build(), lastInteractionPosition);
-//        session.sendUpstreamPacket(updateBlockPacket);
-//        BlockEntityUtils.updateBlockEntity(session, builder.build(), lastInteractionPosition);
-//        LecternUpdatePacket lecternPacket = new LecternUpdatePacket();
-//        lecternPacket.setPage(1);
-//        lecternPacket.setTotalPages(pages.size());
-//        lecternPacket.setDroppingBook(false);
-//        lecternPacket.setBlockPosition(lastInteractionPosition);
-//        session.sendUpstreamPacket(lecternPacket);
-//        session.sendUpstreamPacket(lecternPacket);
-//        session.sendUpstreamPacket(lecternPacket);
+        session.getConnector().getLogger().warning("Updating inventory");
+        updateBook(session, inventory);
     }
 
     @Override
     public void updateSlot(GeyserSession session, Inventory inventory, int slot) {
-
+        session.getConnector().getLogger().warning("Updating slot " + slot);
+        updateBook(session, inventory);
     }
 
     @Override
@@ -130,6 +105,50 @@ public class LecternInventoryTranslator extends InventoryTranslator {
 
     @Override
     public void translateActions(GeyserSession session, Inventory inventory, List<InventoryActionData> actions) {
+        session.getConnector().getLogger().warning("Translating actions");
+    }
 
+    private void updateBook(GeyserSession session, Inventory inventory) {
+        //System.out.println("Updating book...");
+        if (inventory.getItem(0) == null) return;
+        Vector3i lastInteractionPosition = session.getLastInteractionPosition();
+        ItemData item = ItemTranslator.translateToBedrock(session, inventory.getItem(0));
+        ArrayList<NbtMap> pages = new ArrayList<>(item.getTag().getList("pages", NbtType.COMPOUND));
+        pages.add(0, EMPTY_PAGE);
+        pages.add(0, EMPTY_PAGE);
+        item = ItemData.of(item.getId(), item.getDamage(), item.getCount(), item.getTag().toBuilder().putList("pages", NbtType.COMPOUND, pages).build());
+        NbtMapBuilder builder = NbtMap.builder()
+                .putInt("x", lastInteractionPosition.getX())
+                .putInt("y", lastInteractionPosition.getY())
+                .putInt("z", lastInteractionPosition.getZ())
+                .putString("id", "Lectern")
+                .putByte("hasBook", (byte) 1)
+                .putInt("page", session.getLecternBookPage() + 1) // Page appears to have to do with both pages (I.E. setting 1 here actually shows pages 3 and 4)
+                .putInt("totalPages", pages.size()) // Total pages appears to have to do with the total amount of pages
+                .putCompound("book", NbtMap.builder()
+                        .putByte("Count", (byte) item.getCount())
+                        .putShort("Damage", item.getDamage())
+                        .putString("Name", "minecraft:written_book") // It can't be anything else... right?
+                        .putCompound("tag", item.getTag()).build());
+        System.out.println(builder.build());
+        BlockEntityUtils.updateBlockEntity(session, builder.build(), lastInteractionPosition);
+        pages.add(0, EMPTY_PAGE);
+        pages.add(0, EMPTY_PAGE);
+        item = ItemData.of(item.getId(), item.getDamage(), item.getCount(), item.getTag().toBuilder().putList("pages", NbtType.COMPOUND, pages).build());
+        builder = NbtMap.builder()
+                .putInt("x", lastInteractionPosition.getX())
+                .putInt("y", lastInteractionPosition.getY())
+                .putInt("z", lastInteractionPosition.getZ())
+                .putString("id", "Lectern")
+                .putByte("hasBook", (byte) 1)
+                .putInt("page", session.getLecternBookPage() + 2) // Page appears to have to do with both pages (I.E. setting 1 here actually shows pages 3 and 4)
+                .putInt("totalPages", pages.size()) // Total pages appears to have to do with the total amount of pages
+                .putCompound("book", NbtMap.builder()
+                        .putByte("Count", (byte) item.getCount())
+                        .putShort("Damage", item.getDamage())
+                        .putString("Name", "minecraft:written_book") // It can't be anything else... right?
+                        .putCompound("tag", item.getTag()).build());
+        System.out.println(builder.build());
+        BlockEntityUtils.updateBlockEntity(session, builder.build(), lastInteractionPosition);
     }
 }

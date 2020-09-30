@@ -192,6 +192,12 @@ public class GeyserSession implements CommandSender {
     private final EnchantmentInventoryTranslator.EnchantmentSlotData[] enchantmentSlotData = new EnchantmentInventoryTranslator.EnchantmentSlotData[3];
 
     /**
+     * Stores the last book page of a lectern. -1 if no book is being read.
+     */
+    @Setter
+    private int lecternBookPage = -1;
+
+    /**
      * The current attack speed of the player. Used for sending proper cooldown timings.
      */
     @Setter

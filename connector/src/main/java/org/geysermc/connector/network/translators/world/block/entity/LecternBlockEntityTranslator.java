@@ -36,6 +36,7 @@ import org.geysermc.connector.utils.BlockEntityUtils;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @BlockEntity(name = "Lectern", regex = "lectern")
@@ -43,6 +44,7 @@ public class LecternBlockEntityTranslator extends BlockEntityTranslator implemen
 
     @Override
     public void updateBlock(GeyserSession session, int blockState, Vector3i position) {
+        if (session.getLecternBookPage() != -1) return; // Don't worry about this; it's being handled for us in LecternInventoryTranslator
         CompoundTag javaTag = getConstantJavaTag("lectern", position.getX(), position.getY(), position.getZ());
         NbtMapBuilder tagBuilder = getConstantBedrockTag(BlockEntityUtils.getBedrockBlockEntityId("lectern"),
                 position.getX(), position.getY(), position.getZ()).toBuilder();
@@ -59,9 +61,10 @@ public class LecternBlockEntityTranslator extends BlockEntityTranslator implemen
         if (hasBook) {
             // Fun fact of the day: remove these values and you can crash the client!
             map.put("book", generateEmptyBook());
-            map.put("totalPages", 0);
+            map.put("totalPages", 3);
             map.put("page", 0);
         }
+        System.out.println(map);
         return map;
     }
 
@@ -76,9 +79,20 @@ public class LecternBlockEntityTranslator extends BlockEntityTranslator implemen
                 .putShort("Damage", (short) 0)
                 .putByte("Count", (byte) 1)
                 .putCompound("tag", NbtMap.builder()
-                        .putList("pages", NbtType.COMPOUND, new ArrayList<>())
+                        .putList("pages", NbtType.COMPOUND, generateEmptyPages())
                         .putString("title", "")
                         .putString("author", "").build());
         return builder.build();
+    }
+
+    private List<NbtMap> generateEmptyPages() {
+        List<NbtMap> pages = new ArrayList<>(4);
+        for (int i = 0; i < 2; i++) {
+            pages.add(NbtMap.builder()
+                    .putString("photoname", "")
+                    .putString("text", "")
+                    .build());
+        }
+        return pages;
     }
 }
