@@ -151,7 +151,7 @@ public class BedrockActionTranslator extends PacketTranslator<PlayerActionPacket
                             itemEntry = ItemRegistry.getItem(item);
                             nbtData = item.getNbt();
                         }
-                        double breakTime = Math.ceil(BlockUtils.getBreakTime(blockHardness, blockState, itemEntry, nbtData, session) * 20);
+                        double breakTime = Math.ceil(BlockUtils.getBreakTime(blockHardness, blockState, itemEntry, nbtData, session));
                         startBreak.setData((int) (65535 / breakTime));
                         session.setBreakingBlock(blockState);
                         session.sendUpstreamPacket(startBreak);

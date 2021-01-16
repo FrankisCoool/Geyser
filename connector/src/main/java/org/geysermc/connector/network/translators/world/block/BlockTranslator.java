@@ -36,7 +36,6 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import org.geysermc.connector.GeyserConnector;
 import org.geysermc.connector.utils.FileUtils;
-import org.reflections.Reflections;
 
 import java.io.DataInputStream;
 import java.io.InputStream;
@@ -76,6 +75,11 @@ public class BlockTranslator {
     public static final Int2IntMap JAVA_RUNTIME_ID_TO_COLLISION_INDEX = new Int2IntOpenHashMap();
 
     private static final Int2ObjectMap<String> JAVA_RUNTIME_ID_TO_PICK_ITEM = new Int2ObjectOpenHashMap<>();
+
+    /**
+     * Stores Java block state to tool tier requirement, but only if the result is not the base tier
+     */
+    private static final Int2IntMap JAVA_RUNTIME_ID_TO_TOOL_TIER = new Int2IntOpenHashMap();
 
     /**
      * Java numeric ID to java unique identifier, used for block names in the statistics screen
@@ -133,9 +137,6 @@ public class BlockTranslator {
             throw new AssertionError("Unable to load Java block mappings", e);
         }
 
-        Reflections ref = GeyserConnector.getInstance().useXmlReflections() ? FileUtils.getReflections("org.geysermc.connector.network.translators.world.block.entity")
-                : new Reflections("org.geysermc.connector.network.translators.world.block.entity");
-
         int waterRuntimeId = -1;
         int javaRuntimeId = -1;
         int airRuntimeId = -1;
@@ -162,15 +163,17 @@ public class BlockTranslator {
                 JAVA_RUNTIME_ID_TO_HARDNESS.put(javaRuntimeId, hardnessNode.doubleValue());
             }
 
-            try {
-                JAVA_RUNTIME_ID_TO_CAN_HARVEST_WITH_HAND.put(javaRuntimeId, entry.getValue().get("can_break_with_hand").booleanValue());
-            } catch (Exception e) {
-                JAVA_RUNTIME_ID_TO_CAN_HARVEST_WITH_HAND.put(javaRuntimeId, false);
-            }
+            JAVA_RUNTIME_ID_TO_CAN_HARVEST_WITH_HAND.put(javaRuntimeId, entry.getValue().get("can_break_with_hand").booleanValue());
 
             JsonNode toolTypeNode = entry.getValue().get("tool_type");
             if (toolTypeNode != null) {
                 JAVA_RUNTIME_ID_TO_TOOL_TYPE.put(javaRuntimeId, toolTypeNode.textValue());
+
+                // This field will never be present without tool_type also being present
+                JsonNode toolTierNode = entry.getValue().get("tool_tier");
+                if (toolTierNode != null) {
+                    JAVA_RUNTIME_ID_TO_TOOL_TIER.put(javaRuntimeId, toolTierNode.intValue());
+                }
             }
 
             JsonNode collisionIndexNode = entry.getValue().get("collision_index");
@@ -385,5 +388,20 @@ public class BlockTranslator {
             return JAVA_ID_BLOCK_MAP.inverse().get(javaId).split("\\[")[0];
         }
         return itemIdentifier;
+    }
+
+    /**
+     * Returns the tool tier required to break this block. <br>
+     * 0 - if you have the tool, you're set <br>
+     * 1 - stone <br>
+     * 2 - iron <br>
+     * 3 - diamond <br>
+     * 4 - netherite (unused in Java Edition)
+     *
+     * @param javaId the Java block state to determine
+     * @return the tool tier required to break this block, or 0 if any matching tool works
+     */
+    public static int getJavaBlockToolTier(int javaId) {
+        return JAVA_RUNTIME_ID_TO_TOOL_TIER.getOrDefault(javaId, 0);
     }
 }

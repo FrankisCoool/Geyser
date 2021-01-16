@@ -30,20 +30,42 @@ import com.github.steveice10.opennbt.tag.builtin.CompoundTag;
 import com.nukkitx.math.vector.Vector3f;
 import com.nukkitx.protocol.bedrock.data.LevelEventType;
 import com.nukkitx.protocol.bedrock.packet.LevelEventPacket;
+import org.geysermc.connector.entity.Entity;
+import org.geysermc.connector.entity.LivingEntity;
 import org.geysermc.connector.network.session.GeyserSession;
 import org.geysermc.connector.network.translators.PacketTranslator;
 import org.geysermc.connector.network.translators.Translator;
 import org.geysermc.connector.network.translators.item.ItemEntry;
+import org.geysermc.connector.network.translators.item.ItemRegistry;
+import org.geysermc.connector.network.translators.item.ItemTranslator;
 import org.geysermc.connector.network.translators.world.block.BlockTranslator;
 import org.geysermc.connector.utils.BlockUtils;
 
 @Translator(packet = ServerBlockBreakAnimPacket.class)
 public class JavaBlockBreakAnimTranslator extends PacketTranslator<ServerBlockBreakAnimPacket> {
 
+    private static final CompoundTag EMPTY = new CompoundTag("");
+
     @Override
     public void translate(ServerBlockBreakAnimPacket packet, GeyserSession session) {
+        Entity entity;
+        if (packet.getBreakerEntityId() == session.getPlayerEntity().getEntityId()) {
+            entity = session.getPlayerEntity();
+        } else {
+            entity = session.getEntityCache().getEntityByJavaId(packet.getBreakerEntityId());
+        }
+        ItemEntry breakingTool;
+        CompoundTag tag;
+        if (entity instanceof LivingEntity) {
+            breakingTool = ItemRegistry.getItem(((LivingEntity) entity).getHand());
+            tag = ItemTranslator.translateToJava(((LivingEntity) entity).getHand()).getNbt();
+        } else {
+            breakingTool = ItemEntry.AIR;
+            tag = EMPTY;
+        }
+
         int state = session.getConnector().getWorldManager().getBlockAt(session, packet.getPosition().getX(), packet.getPosition().getY(), packet.getPosition().getZ());
-        int breakTime = (int) (65535 / Math.ceil(BlockUtils.getBreakTime(BlockTranslator.JAVA_RUNTIME_ID_TO_HARDNESS.get(state), state, ItemEntry.AIR, new CompoundTag(""), null) * 20));
+        int breakTime = (int) (65535 / Math.ceil(BlockUtils.getBreakTime(BlockTranslator.JAVA_RUNTIME_ID_TO_HARDNESS.get(state), state, breakingTool, tag, null)));
         LevelEventPacket levelEventPacket = new LevelEventPacket();
         levelEventPacket.setPosition(Vector3f.from(
                 packet.getPosition().getX(),

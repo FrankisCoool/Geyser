@@ -32,15 +32,13 @@ public class ItemUtils {
     public static int getEnchantmentLevel(CompoundTag itemNBTData, String enchantmentId) {
         ListTag enchantments = (itemNBTData == null ? null : itemNBTData.get("Enchantments"));
         if (enchantments != null) {
-            int enchantmentLevel = 0;
             for (Tag tag : enchantments) {
                 CompoundTag enchantment = (CompoundTag) tag;
                 StringTag enchantId = enchantment.get("id");
                 if (enchantId.getValue().equals(enchantmentId)) {
-                    enchantmentLevel = (int) ((ShortTag) enchantment.get("lvl")).getValue();
+                    return ((Number) enchantment.get("lvl").getValue()).intValue();
                 }
             }
-            return enchantmentLevel;
         }
         return 0;
     }
