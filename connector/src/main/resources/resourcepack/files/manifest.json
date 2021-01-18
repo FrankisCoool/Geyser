@@ -1,0 +1,16 @@
+{
+  "header" : {
+    "description" : "GeyserMC Java Items",
+    "name" : "resources",
+    "uuid" : "b6b11d49-a121-4526-a523-3b43eabbd56d",
+    "version" : [ 0, 0, 2 ],
+    "min_engine_version" : [ 1, 14, 0 ]
+  },
+  "modules" : [ {
+    "description" : "GeyserMC Java Items",
+    "type" : "resources",
+    "uuid" : "8bdfd1f6-2c79-46d1-a560-ecca07db4d69",
+    "version" : [ 0, 0, 2 ]
+  } ],
+  "format_version" : 2
+}

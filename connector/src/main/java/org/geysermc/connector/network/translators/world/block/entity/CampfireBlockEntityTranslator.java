@@ -29,7 +29,7 @@ import com.github.steveice10.opennbt.tag.builtin.CompoundTag;
 import com.github.steveice10.opennbt.tag.builtin.ListTag;
 import com.nukkitx.nbt.NbtMap;
 import com.nukkitx.nbt.NbtMapBuilder;
-import org.geysermc.connector.network.translators.item.ItemEntry;
+import org.geysermc.connector.api.item.ItemEntry;
 import org.geysermc.connector.network.translators.item.ItemRegistry;
 
 @BlockEntity(name = "Campfire", regex = "campfire")

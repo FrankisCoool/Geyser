@@ -31,7 +31,7 @@ import com.github.steveice10.opennbt.tag.builtin.Tag;
 import org.geysermc.connector.network.session.GeyserSession;
 import org.geysermc.connector.network.translators.ItemRemapper;
 import org.geysermc.connector.network.translators.item.NbtItemStackTranslator;
-import org.geysermc.connector.network.translators.item.ItemEntry;
+import org.geysermc.connector.api.item.ItemEntry;
 
 @ItemRemapper(priority = 1)
 public class EnchantedBookTranslator extends NbtItemStackTranslator {

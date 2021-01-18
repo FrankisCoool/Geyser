@@ -54,7 +54,7 @@ import org.geysermc.connector.network.session.GeyserSession;
 import org.geysermc.connector.network.translators.PacketTranslator;
 import org.geysermc.connector.network.translators.Translator;
 import org.geysermc.connector.network.translators.inventory.InventoryTranslator;
-import org.geysermc.connector.network.translators.item.ItemEntry;
+import org.geysermc.connector.api.item.ItemEntry;
 import org.geysermc.connector.network.translators.item.ItemRegistry;
 import org.geysermc.connector.network.translators.sound.EntitySoundInteractionHandler;
 import org.geysermc.connector.network.translators.world.block.BlockTranslator;

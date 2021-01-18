@@ -1,0 +1,14 @@
+[
+  {
+    "filename": "item_texture.json",
+    "destination": "textures"
+  },
+  {
+    "filename": "manifest.json",
+    "destination": ""
+  },
+  {
+    "filename": "spectral_arrow.json",
+    "destination": "items"
+  }
+]

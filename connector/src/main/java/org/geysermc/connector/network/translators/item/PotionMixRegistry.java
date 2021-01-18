@@ -26,6 +26,7 @@
 package org.geysermc.connector.network.translators.item;
 
 import com.nukkitx.protocol.bedrock.data.inventory.PotionMixData;
+import org.geysermc.connector.api.item.ItemEntry;
 
 import java.util.*;
 

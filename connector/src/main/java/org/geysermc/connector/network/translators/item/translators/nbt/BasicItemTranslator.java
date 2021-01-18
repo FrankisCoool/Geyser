@@ -35,7 +35,7 @@ import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.geysermc.connector.network.session.GeyserSession;
 import org.geysermc.connector.network.translators.ItemRemapper;
-import org.geysermc.connector.network.translators.item.ItemEntry;
+import org.geysermc.connector.api.item.ItemEntry;
 import org.geysermc.connector.network.translators.item.NbtItemStackTranslator;
 
 import java.util.ArrayList;

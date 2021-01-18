@@ -36,7 +36,7 @@ import com.nukkitx.protocol.bedrock.data.entity.EntityFlag;
 import org.geysermc.connector.GeyserConnector;
 import org.geysermc.connector.entity.type.EntityType;
 import org.geysermc.connector.network.session.GeyserSession;
-import org.geysermc.connector.network.translators.item.ItemEntry;
+import org.geysermc.connector.api.item.ItemEntry;
 import org.geysermc.connector.network.translators.item.ItemRegistry;
 import org.geysermc.connector.network.translators.item.Potion;
 

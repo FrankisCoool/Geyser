@@ -23,7 +23,7 @@
  * @link https://github.com/GeyserMC/Geyser
  */
 
-package org.geysermc.connector.network.translators.item;
+package org.geysermc.connector.api.item;
 
 import lombok.Getter;
 

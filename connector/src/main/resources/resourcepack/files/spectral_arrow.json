@@ -1,0 +1,11 @@
+{
+  "format_version" : "1.16.0",
+  "minecraft:item" : {
+    "description" : {
+      "identifier" : "geysermc:spectral_arrow"
+    },
+    "components" : {
+      "minecraft:icon" : "spectral_arrow"
+    }
+  }
+}

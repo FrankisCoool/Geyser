@@ -23,29 +23,29 @@
  * @link https://github.com/GeyserMC/Geyser
  */
 
-package org.geysermc.connector.network.translators.item;
+package org.geysermc.connector.network.translators.item.java_item_entries;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.ToString;
+import javax.annotation.Nonnull;
 
-@Getter
-@AllArgsConstructor
-@ToString
-public class ItemEntry {
+public class SpectralArrow extends AbstractGeyserCustomItem {
+    public SpectralArrow(int javaId, int bedrockId) {
+        super("minecraft:spectral_arrow", "geysermc:spectral_arrow", javaId, bedrockId, 0, false);
+    }
 
-    public static ItemEntry AIR = new ItemEntry("minecraft:air", "minecraft:air", 0, 0, 0, false);
+    @Nonnull
+    @Override
+    public String getTranslationKey() {
+        return "item.minecraft.spectral_arrow";
+    }
 
-    private final String javaIdentifier;
-    private final String bedrockIdentifier;
-    private final int javaId;
-    private final int bedrockId;
-    private final int bedrockData;
-
-    private final boolean block;
+    @Nonnull
+    @Override
+    public String getTextureIdentifier() {
+        return "spectral_arrow";
+    }
 
     @Override
-    public boolean equals(Object obj) {
-        return obj == this || (obj instanceof ItemEntry && ((ItemEntry) obj).getBedrockId() == this.getBedrockId() && ((ItemEntry) obj).getJavaIdentifier().equals(this.getJavaIdentifier()));
+    public boolean isArrow() {
+        return true;
     }
 }

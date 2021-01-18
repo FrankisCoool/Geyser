@@ -38,6 +38,7 @@ import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode;
+import org.geysermc.connector.api.item.ItemEntry;
 import org.geysermc.connector.network.session.GeyserSession;
 import org.geysermc.connector.network.translators.PacketTranslator;
 import org.geysermc.connector.network.translators.Translator;

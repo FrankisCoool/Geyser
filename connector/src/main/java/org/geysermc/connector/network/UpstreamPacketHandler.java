@@ -26,6 +26,7 @@
 package org.geysermc.connector.network;
 
 import com.nukkitx.protocol.bedrock.BedrockPacket;
+import com.nukkitx.protocol.bedrock.data.ExperimentData;
 import com.nukkitx.protocol.bedrock.data.ResourcePackType;
 import com.nukkitx.protocol.bedrock.BedrockPacketCodec;
 import com.nukkitx.protocol.bedrock.packet.*;
@@ -81,7 +82,7 @@ public class UpstreamPacketHandler extends LoggingPacketHandler {
                     header.getUuid().toString(), header.getVersionString(), resourcePack.getFile().length(),
                             "", "", "", false, false));
         }
-        resourcePacksInfo.setForcedToAccept(GeyserConnector.getInstance().getConfig().isForceResourcePacks());
+        resourcePacksInfo.setForcedToAccept(ResourcePack.PACKS.size() == 1 || GeyserConnector.getInstance().getConfig().isForceResourcePacks());
         session.sendUpstreamPacket(resourcePacksInfo);
         return true;
     }
@@ -118,13 +119,17 @@ public class UpstreamPacketHandler extends LoggingPacketHandler {
             case HAVE_ALL_PACKS:
                 ResourcePackStackPacket stackPacket = new ResourcePackStackPacket();
                 stackPacket.setExperimentsPreviouslyToggled(false);
-                stackPacket.setForcedToAccept(false); // Leaving this as false allows the player to choose to download or not
+                // Leaving this as false when there is more than our default pack allows the player to choose to download or not
+                stackPacket.setForcedToAccept(ResourcePack.PACKS.size() == 1);
                 stackPacket.setGameVersion(session.getClientData().getGameVersion());
 
                 for (ResourcePack pack : ResourcePack.PACKS.values()) {
                     ResourcePackManifest.Header header = pack.getManifest().getHeader();
                     stackPacket.getResourcePacks().add(new ResourcePackStackPacket.Entry(header.getUuid().toString(), header.getVersionString(), ""));
                 }
+
+                // Allow custom items to work
+                stackPacket.getExperiments().add(new ExperimentData("data_driven_items", true));
 
                 session.sendUpstreamPacket(stackPacket);
                 break;

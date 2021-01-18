@@ -35,6 +35,8 @@ import com.nukkitx.protocol.bedrock.data.inventory.ItemData;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import org.geysermc.connector.GeyserConnector;
+import org.geysermc.connector.api.item.ItemEntry;
+import org.geysermc.connector.api.item.NeedsTranslation;
 import org.geysermc.connector.network.session.GeyserSession;
 import org.geysermc.connector.network.translators.ItemRemapper;
 import org.geysermc.connector.network.translators.chat.MessageTranslator;
@@ -134,8 +136,6 @@ public abstract class ItemTranslator {
             nbt.put(new IntTag("map", 0));
         }
 
-        ItemStack itemStack = new ItemStack(stack.getId(), stack.getAmount(), nbt);
-
         if (nbt != null) {
             for (NbtItemStackTranslator translator : NBT_TRANSLATORS) {
                 if (translator.acceptItem(bedrockItem)) {
@@ -144,7 +144,7 @@ public abstract class ItemTranslator {
             }
         }
 
-        translateDisplayProperties(session, nbt);
+        ItemStack itemStack = new ItemStack(stack.getId(), stack.getAmount(), translateDisplayProperties(session, nbt, bedrockItem));
 
         ItemData itemData;
         ItemTranslator itemStackTranslator = ITEM_STACK_TRANSLATORS.get(bedrockItem.getJavaId());
@@ -381,8 +381,12 @@ public abstract class ItemTranslator {
      * Translates the display name of the item
      * @param session the Bedrock client's session
      * @param tag the tag to translate
+     * @param itemEntry the item entry
+     *
+     * @return the new tag to use, should the current one be null
      */
-    public static void translateDisplayProperties(GeyserSession session, CompoundTag tag) {
+    public static CompoundTag translateDisplayProperties(GeyserSession session, CompoundTag tag, ItemEntry itemEntry) {
+        boolean hasCustomName = false;
         if (tag != null) {
             CompoundTag display = tag.get("display");
             if (display != null && display.contains("Name")) {
@@ -393,11 +397,31 @@ public abstract class ItemTranslator {
 
                 // Add the new name tag
                 display.put(new StringTag("Name", name));
+                // Set that we added a custom name
+                hasCustomName = true;
 
                 // Add to the new root tag
                 tag.put(display);
             }
         }
+        if (!hasCustomName && itemEntry instanceof NeedsTranslation) {
+            // No custom name, but we need to localize the custom item
+            if (tag == null) {
+                tag = new CompoundTag("");
+            }
+            CompoundTag display = tag.get("display");
+            if (display == null) {
+                display = new CompoundTag("display");
+            }
+
+            String translationKey = ((NeedsTranslation) itemEntry).getTranslationKey();
+            // Reset formatting since Bedrock defaults to italics
+            display.put(new StringTag("Name", "§r§f" + ((NeedsTranslation) itemEntry).getTranslationSystem().apply(translationKey, session.getLocale())));
+
+            // Add to the new root tag
+            tag.put(display);
+        }
+        return tag;
     }
 
     /**

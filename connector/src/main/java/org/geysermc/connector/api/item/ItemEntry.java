@@ -23,39 +23,29 @@
  * @link https://github.com/GeyserMC/Geyser
  */
 
-package org.geysermc.connector.network.translators.item;
+package org.geysermc.connector.api.item;
 
-import com.github.steveice10.opennbt.tag.builtin.CompoundTag;
-import org.geysermc.connector.api.item.ItemEntry;
-import org.geysermc.connector.network.session.GeyserSession;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.ToString;
 
-public class NbtItemStackTranslator {
+@Getter
+@AllArgsConstructor
+@ToString
+public class ItemEntry {
 
-    /**
-     * Translate the item NBT to Bedrock
-     * @param session the client's current session
-     * @param itemTag the item's CompoundTag
-     * @param itemEntry Geyser's item entry
-     */
-    public void translateToBedrock(GeyserSession session, CompoundTag itemTag, ItemEntry itemEntry) {
+    public static ItemEntry AIR = new ItemEntry("minecraft:air", "minecraft:air", 0, 0, 0, false);
 
+    private final String javaIdentifier;
+    private final String bedrockIdentifier;
+    private final int javaId;
+    private final int bedrockId;
+    private final int bedrockData;
+
+    private final boolean block;
+
+    @Override
+    public boolean equals(Object obj) {
+        return obj == this || (obj instanceof ItemEntry && ((ItemEntry) obj).getBedrockId() == this.getBedrockId() && ((ItemEntry) obj).getJavaIdentifier().equals(this.getJavaIdentifier()));
     }
-
-    /**
-     * Translate the item NBT to Java.
-     * @param itemTag the item's CompoundTag
-     * @param itemEntry Geyser's item entry
-     */
-    public void translateToJava(CompoundTag itemTag, ItemEntry itemEntry) {
-
-    }
-
-    /**
-     * @param itemEntry Geyser's item entry
-     * @return if the item should be processed under this class
-     */
-    public boolean acceptItem(ItemEntry itemEntry) {
-        return true;
-    }
-
 }

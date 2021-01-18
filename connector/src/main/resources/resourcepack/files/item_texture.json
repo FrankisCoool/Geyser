@@ -1,0 +1,9 @@
+{
+  "resource_pack_name" : "geysercmd",
+  "texture_name" : "atlas.items",
+  "texture_data" : {
+    "spectral_arrow" : {
+      "textures" : "textures/item/spectral_arrow"
+    }
+  }
+}

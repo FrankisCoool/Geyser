@@ -23,39 +23,34 @@
  * @link https://github.com/GeyserMC/Geyser
  */
 
-package org.geysermc.connector.network.translators.item;
+package org.geysermc.connector.api.item;
 
-import com.github.steveice10.opennbt.tag.builtin.CompoundTag;
-import org.geysermc.connector.api.item.ItemEntry;
-import org.geysermc.connector.network.session.GeyserSession;
+import javax.annotation.Nonnull;
+import java.util.function.BiFunction;
 
-public class NbtItemStackTranslator {
+/**
+ * Implemented onto any item that requires translation to its name.
+ */
+public interface NeedsTranslation {
+    /**
+     * This will be called if an item has no custom name and requires a default name. <br>
+     *
+     * The first string will be the translatable key as defined in {@link #getTranslationKey()}. <br>
+     * The second string will be the Bedrock client's language in the format of ll_CC - ll being the language code,
+     * and cc being the country code.
+     *
+     * @return the translation method to call if no custom name is provided.
+     */
+    @Nonnull
+    BiFunction<String, String, String> getTranslationSystem();
 
     /**
-     * Translate the item NBT to Bedrock
-     * @param session the client's current session
-     * @param itemTag the item's CompoundTag
-     * @param itemEntry Geyser's item entry
+     * Used with the translation system.
+     *
+     * {@see {@link #getTranslationSystem()}}
+     *
+     * @return the string key to translate into the Bedrock client's language.
      */
-    public void translateToBedrock(GeyserSession session, CompoundTag itemTag, ItemEntry itemEntry) {
-
-    }
-
-    /**
-     * Translate the item NBT to Java.
-     * @param itemTag the item's CompoundTag
-     * @param itemEntry Geyser's item entry
-     */
-    public void translateToJava(CompoundTag itemTag, ItemEntry itemEntry) {
-
-    }
-
-    /**
-     * @param itemEntry Geyser's item entry
-     * @return if the item should be processed under this class
-     */
-    public boolean acceptItem(ItemEntry itemEntry) {
-        return true;
-    }
-
+    @Nonnull
+    String getTranslationKey();
 }

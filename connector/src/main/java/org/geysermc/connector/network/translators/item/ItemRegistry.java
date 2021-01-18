@@ -30,6 +30,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.github.steveice10.mc.protocol.data.game.entity.metadata.ItemStack;
 import com.nukkitx.nbt.NbtMap;
 import com.nukkitx.nbt.NbtUtils;
+import com.nukkitx.protocol.bedrock.data.inventory.ComponentItemData;
 import com.nukkitx.protocol.bedrock.data.inventory.ItemData;
 import com.nukkitx.protocol.bedrock.packet.StartGamePacket;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
@@ -37,6 +38,9 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
 import org.geysermc.connector.GeyserConnector;
+import org.geysermc.connector.api.item.ItemEntry;
+import org.geysermc.connector.api.item.ToolItemEntry;
+import org.geysermc.connector.network.translators.item.java_item_entries.SpectralArrow;
 import org.geysermc.connector.utils.FileUtils;
 import org.geysermc.connector.utils.LanguageUtils;
 
@@ -62,6 +66,8 @@ public class ItemRegistry {
 
     public static final List<StartGamePacket.ItemEntry> ITEMS = new ArrayList<>();
     public static final Int2ObjectMap<ItemEntry> ITEM_ENTRIES = new Int2ObjectOpenHashMap<>();
+
+    public static final List<ComponentItemData> CUSTOM_ITEM_ENTRIES = new ArrayList<>();
 
     /**
      * Bamboo item entry, used in PandaEntity.java
@@ -142,10 +148,16 @@ public class ItemRegistry {
             throw new AssertionError(LanguageUtils.getLocaleStringLog("geyser.toolbox.fail.runtime_java"), e);
         }
 
+        int spectralItemId = 0;
         int itemIndex = 0;
         Iterator<Map.Entry<String, JsonNode>> iterator = items.fields();
         while (iterator.hasNext()) {
             Map.Entry<String, JsonNode> entry = iterator.next();
+            if (entry.getKey().equals("minecraft:spectral_arrow")) {
+                //TODO
+                spectralItemId = itemIndex++;
+                continue;
+            }
             int bedrockId = entry.getValue().get("bedrock_id").intValue();
             String bedrockIdentifier = bedrockIdToIdentifier.get(bedrockId);
             if (bedrockIdentifier == null) {
@@ -217,6 +229,13 @@ public class ItemRegistry {
         // Add the loadstone compass since it doesn't exist on java but we need it for item conversion
         ITEM_ENTRIES.put(itemIndex, new ItemEntry("minecraft:lodestone_compass", "minecraft:lodestone_compass", itemIndex,
                 lodestoneCompassId, 0, false));
+
+        itemIndex++;
+
+        SpectralArrow spectralArrow = new SpectralArrow(spectralItemId, ITEM_ENTRIES.size() + 1);
+        ITEMS.add(new StartGamePacket.ItemEntry(spectralArrow.getBedrockIdentifier(), (short) spectralArrow.getBedrockId(), true));
+        ITEM_ENTRIES.put(spectralItemId, spectralArrow);
+        CUSTOM_ITEM_ENTRIES.add(spectralArrow.build());
 
         /* Load creative items */
         stream = FileUtils.getResource("bedrock/creative_items.json");
