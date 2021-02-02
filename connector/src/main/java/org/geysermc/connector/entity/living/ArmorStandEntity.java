@@ -27,15 +27,20 @@ package org.geysermc.connector.entity.living;
 
 import com.github.steveice10.mc.protocol.data.game.entity.metadata.EntityMetadata;
 import com.github.steveice10.mc.protocol.data.game.entity.metadata.MetadataType;
+import com.github.steveice10.mc.protocol.data.game.entity.metadata.Rotation;
 import com.nukkitx.math.vector.Vector3f;
 import com.nukkitx.protocol.bedrock.data.entity.EntityData;
 import com.nukkitx.protocol.bedrock.data.entity.EntityFlag;
 import com.nukkitx.protocol.bedrock.data.inventory.ItemData;
 import com.nukkitx.protocol.bedrock.packet.MoveEntityAbsolutePacket;
 import lombok.Getter;
+import org.geysermc.connector.entity.ArmorStandPose;
+import org.geysermc.connector.entity.BedrockArmorStandPose;
 import org.geysermc.connector.entity.LivingEntity;
 import org.geysermc.connector.entity.type.EntityType;
 import org.geysermc.connector.network.session.GeyserSession;
+
+import java.util.function.Consumer;
 
 public class ArmorStandEntity extends LivingEntity {
 
@@ -59,6 +64,15 @@ public class ArmorStandEntity extends LivingEntity {
      * Whether the last position update included the offset.
      */
     private boolean lastPositionIncludedOffset = false;
+
+    /**
+     * The current Java pose of this armor stand.
+     */
+    private final ArmorStandPose pose = new ArmorStandPose();
+    /**
+     * If hands are being shown in Java. If so, we exclude them from pose checks
+     */
+    private boolean showHands = false;
     private GeyserSession session;
 
     public ArmorStandEntity(long entityId, long geyserId, EntityType entityType, Vector3f position, Vector3f motion, Vector3f rotation) {
@@ -118,6 +132,13 @@ public class ArmorStandEntity extends LivingEntity {
         } else if (entityMetadata.getId() == 14 && entityMetadata.getType() == MetadataType.BYTE) {
             byte xd = (byte) entityMetadata.getValue();
 
+            // While we cannot hide the hands on Bedrock, we can at least take into consideration if we need to check for a pose with hands
+            boolean oldShowHands = this.showHands;
+            this.showHands = (xd & 0x04) == 0x04;
+            if (oldShowHands != this.showHands) {
+                checkForRotationUpdate(entityMetadata);
+            }
+
             // isSmall
             if ((xd & 0x01) == 0x01) {
                 isSmall = true;
@@ -141,10 +162,83 @@ public class ArmorStandEntity extends LivingEntity {
                 metadata.put(EntityData.BOUNDING_BOX_HEIGHT, 0.0f);
                 isMarker = true;
             }
+        } else {
+            checkForRotationUpdate(entityMetadata);
         }
         if (secondEntity != null) {
             secondEntity.updateBedrockMetadata(entityMetadata, session);
         }
+    }
+
+    /**
+     * If the provided entity metadata is a rotation value, update our
+     *
+     * @param entityMetadata
+     */
+    private void checkForRotationUpdate(EntityMetadata entityMetadata) {
+        Consumer<Vector3f> setter;
+        switch (entityMetadata.getId()) {
+            // Check to see if we are expecting an incoming rotation value first
+            case 15:
+                setter = pose::setHead;
+                break;
+            case 16:
+                setter = pose::setBody;
+                break;
+            case 17:
+                setter = pose::setLeftArm;
+                break;
+            case 18:
+                setter = pose::setRightArm;
+                break;
+            case 19:
+                setter = pose::setLeftLeg;
+                break;
+            case 20:
+                setter = pose::setRightLeg;
+                break;
+            default:
+                return;
+        }
+        Rotation partRotation = (Rotation) entityMetadata.getValue();
+        setter.accept(Vector3f.from(partRotation.getPitch(), partRotation.getYaw(), partRotation.getRoll()));
+
+        recalculateClosestPose();
+    }
+
+    /**
+     * From the given rotation values, determine what the closest Bedrock armor stand position is
+     */
+    private void recalculateClosestPose() {
+        if (!primaryEntity || isMarker || (isInvisible && !metadata.getFlags().getFlag(EntityFlag.INVISIBLE))) {
+            return;
+        }
+        BedrockArmorStandPose matchedPose = BedrockArmorStandPose.DEFAULT;
+        float matchedDistance = Float.MAX_VALUE;
+        for (BedrockArmorStandPose potentialPose : BedrockArmorStandPose.values()) {
+            float bodyDifference = potentialPose.getBody().distanceSquared(this.pose.getBody());
+            float headDifference = potentialPose.getHead().distanceSquared(this.pose.getHead());
+            float leftLegDifference = potentialPose.getLeftLeg().distanceSquared(this.pose.getLeftLeg());
+            float rightLegDifference = potentialPose.getRightLeg().distanceSquared(this.pose.getRightLeg());
+
+            float averageDistance;
+            if (this.showHands) {
+                float leftArmDifference = potentialPose.getLeftArm().distanceSquared(this.pose.getLeftArm());
+                float rightArmDifference = potentialPose.getRightArm().distanceSquared(this.pose.getRightArm());
+                averageDistance = (bodyDifference + headDifference + leftArmDifference + rightArmDifference + leftLegDifference + rightLegDifference) / 6f;
+            } else {
+                averageDistance = (bodyDifference + headDifference + leftLegDifference + rightLegDifference) / 4f;
+            }
+
+            if (averageDistance < matchedDistance) {
+                matchedPose = potentialPose;
+                matchedDistance = averageDistance;
+            }
+            if (averageDistance == 0) {
+                break; // This is an exact pose
+            }
+        }
+        metadata.put(EntityData.ARMOR_STAND_POSE_INDEX, matchedPose.ordinal());
     }
 
     @Override
