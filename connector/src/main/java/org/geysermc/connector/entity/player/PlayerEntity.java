@@ -160,7 +160,7 @@ public class PlayerEntity extends LivingEntity {
         this.position = Vector3f.from(position.getX() + relX, position.getY() + relY, position.getZ() + relZ);
 
         // If this is the player logged in through this Geyser session
-        if (geyserId == 1) {
+        if (geyserId == session.getPlayerEntity().getGeyserId()) {
             session.getCollisionManager().updatePlayerBoundingBox(position);
         }
         setOnGround(isOnGround);

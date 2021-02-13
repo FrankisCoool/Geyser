@@ -29,12 +29,15 @@ import com.fasterxml.jackson.annotation.JsonEnumDefaultValue;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
+import lombok.Setter;
+import lombok.ToString;
 import org.geysermc.floodgate.util.DeviceOS;
 
 import java.util.UUID;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 @Getter
+@ToString
 public class BedrockClientData {
     @JsonProperty(value = "GameVersion")
     private String gameVersion;
@@ -43,6 +46,7 @@ public class BedrockClientData {
     @JsonProperty(value = "ThirdPartyName")
     private String username;
     @JsonProperty(value = "LanguageCode")
+    @Setter // for subclients
     private String languageCode;
 
     @JsonProperty(value = "SkinId")
@@ -65,8 +69,12 @@ public class BedrockClientData {
     private boolean capeOnClassicSkin;
     @JsonProperty(value = "SkinResourcePatch")
     private String geometryName;
+    @JsonProperty(value = "SkinResources")
+    private String subClientGeometryName;
     @JsonProperty(value = "SkinGeometryData")
     private String geometryData;
+    @JsonProperty(value = "SkinGeometry")
+    private String subClientGeometryData;
     @JsonProperty(value = "PersonaSkin")
     private boolean personaSkin;
     @JsonProperty(value = "PremiumSkin")

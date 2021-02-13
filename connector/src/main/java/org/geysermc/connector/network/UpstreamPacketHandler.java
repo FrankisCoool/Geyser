@@ -26,6 +26,7 @@
 package org.geysermc.connector.network;
 
 import com.nukkitx.protocol.bedrock.BedrockPacket;
+import com.nukkitx.protocol.bedrock.BedrockSubClientServerSession;
 import com.nukkitx.protocol.bedrock.data.ResourcePackType;
 import com.nukkitx.protocol.bedrock.BedrockPacketCodec;
 import com.nukkitx.protocol.bedrock.packet.*;
@@ -83,6 +84,36 @@ public class UpstreamPacketHandler extends LoggingPacketHandler {
         }
         resourcePacksInfo.setForcedToAccept(GeyserConnector.getInstance().getConfig().isForceResourcePacks());
         session.sendUpstreamPacket(resourcePacksInfo);
+        return true;
+    }
+
+    /**
+     * A sub client's login differs *slightly*
+     * Some things have been done for the main client and don't need to be repeated:
+     * - Version compatibility
+     * - Encryption
+     * - Resource packs
+     * Instead we can immediately connect the session
+     */
+    @Override
+    public boolean handle(SubClientLoginPacket packet) {
+        LoginEncryptionUtils.handleCertChainData(connector, session, packet.getChainData(), packet.getSkinData());
+
+        BedrockSubClientServerSession protocolSession = ((BedrockSubClientServerSession) this.session.getUpstream().getSession());
+        for (GeyserSession session : connector.getPlayers()) {
+            if (session.getUpstream().getSession() == protocolSession.getMainSession()) {
+                this.session.getClientData().setLanguageCode(session.getClientData().getLanguageCode());
+                break;
+            }
+        }
+
+        PlayStatusPacket playStatus = new PlayStatusPacket();
+        playStatus.setStatus(PlayStatusPacket.Status.LOGIN_SUCCESS);
+        session.sendUpstreamPacket(playStatus);
+
+        connector.getLogger().info(LanguageUtils.getLocaleStringLog("geyser.network.connect", session.getAuthData().getName()));
+
+        session.connect(connector.getRemoteServer());
         return true;
     }
 

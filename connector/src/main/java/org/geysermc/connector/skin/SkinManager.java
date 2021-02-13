@@ -211,8 +211,15 @@ public class SkinManager {
             byte[] skinBytes = Base64.getDecoder().decode(clientData.getSkinData().getBytes(StandardCharsets.UTF_8));
             byte[] capeBytes = clientData.getCapeData();
 
-            byte[] geometryNameBytes = Base64.getDecoder().decode(clientData.getGeometryName().getBytes(StandardCharsets.UTF_8));
-            byte[] geometryBytes = Base64.getDecoder().decode(clientData.getGeometryData().getBytes(StandardCharsets.UTF_8));
+            byte[] geometryNameBytes;
+            byte[] geometryBytes;
+            if (clientData.getSubClientGeometryName() != null) {
+                geometryNameBytes = Base64.getDecoder().decode(clientData.getSubClientGeometryName().getBytes(StandardCharsets.UTF_8));
+                geometryBytes = Base64.getDecoder().decode(clientData.getSubClientGeometryData().getBytes(StandardCharsets.UTF_8));
+            } else {
+                geometryNameBytes = Base64.getDecoder().decode(clientData.getGeometryName().getBytes(StandardCharsets.UTF_8));
+                geometryBytes = Base64.getDecoder().decode(clientData.getGeometryData().getBytes(StandardCharsets.UTF_8));
+            }
 
             if (skinBytes.length <= (128 * 128 * 4) && !clientData.isPersonaSkin()) {
                 SkinProvider.storeBedrockSkin(playerEntity.getUuid(), clientData.getSkinId(), skinBytes);

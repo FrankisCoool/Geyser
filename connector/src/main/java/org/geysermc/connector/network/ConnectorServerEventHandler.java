@@ -28,6 +28,9 @@ package org.geysermc.connector.network;
 import com.nukkitx.protocol.bedrock.BedrockPong;
 import com.nukkitx.protocol.bedrock.BedrockServerEventHandler;
 import com.nukkitx.protocol.bedrock.BedrockServerSession;
+import com.nukkitx.protocol.bedrock.BedrockSubClientServerSession;
+import com.nukkitx.protocol.bedrock.handler.BatchHandler;
+import com.nukkitx.protocol.bedrock.handler.DefaultServerBatchHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.socket.DatagramPacket;
 import org.geysermc.connector.GeyserConnector;
@@ -44,9 +47,11 @@ import java.nio.charset.StandardCharsets;
 public class ConnectorServerEventHandler implements BedrockServerEventHandler {
 
     private final GeyserConnector connector;
+    private final BatchHandler defaultBatchHandler;
 
     public ConnectorServerEventHandler(GeyserConnector connector) {
         this.connector = connector;
+        this.defaultBatchHandler = new DefaultServerBatchHandler(connector.getBedrockServer());
     }
 
     @Override
@@ -127,6 +132,15 @@ public class ConnectorServerEventHandler implements BedrockServerEventHandler {
 
     @Override
     public void onSessionCreation(BedrockServerSession bedrockServerSession) {
+        bedrockServerSession.setLogging(true);
+        bedrockServerSession.setPacketHandler(new UpstreamPacketHandler(connector, new GeyserSession(connector, bedrockServerSession)));
+        bedrockServerSession.setBatchHandler(defaultBatchHandler);
+        // Set the packet codec to default just in case we need to send disconnect packets.
+        bedrockServerSession.setPacketCodec(BedrockProtocol.DEFAULT_BEDROCK_CODEC);
+    }
+
+    @Override
+    public void onSubSessionCreation(BedrockSubClientServerSession bedrockServerSession) {
         bedrockServerSession.setLogging(true);
         bedrockServerSession.setPacketHandler(new UpstreamPacketHandler(connector, new GeyserSession(connector, bedrockServerSession)));
         // Set the packet codec to default just in case we need to send disconnect packets.

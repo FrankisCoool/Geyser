@@ -52,6 +52,7 @@ import com.nukkitx.math.GenericMath;
 import com.nukkitx.math.vector.*;
 import com.nukkitx.protocol.bedrock.BedrockPacket;
 import com.nukkitx.protocol.bedrock.BedrockServerSession;
+import com.nukkitx.protocol.bedrock.BedrockSubClientServerSession;
 import com.nukkitx.protocol.bedrock.data.*;
 import com.nukkitx.protocol.bedrock.data.command.CommandPermission;
 import com.nukkitx.protocol.bedrock.packet.*;
@@ -113,6 +114,8 @@ public class GeyserSession implements CommandSender {
     private AuthData authData;
     @Setter
     private BedrockClientData clientData;
+
+    private final boolean isSubClient;
 
     @Deprecated
     @Setter
@@ -353,6 +356,8 @@ public class GeyserSession implements CommandSender {
     public GeyserSession(GeyserConnector connector, BedrockServerSession bedrockServerSession) {
         this.connector = connector;
         this.upstream = new UpstreamSession(bedrockServerSession);
+
+        this.isSubClient = bedrockServerSession instanceof BedrockSubClientServerSession;
 
         this.advancementsCache = new AdvancementsCache(this);
         this.bookEditCache = new BookEditCache(this);
