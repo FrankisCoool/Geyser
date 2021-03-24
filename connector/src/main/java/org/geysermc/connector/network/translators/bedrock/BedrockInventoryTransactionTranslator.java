@@ -115,16 +115,30 @@ public class BedrockInventoryTransactionTranslator extends PacketTranslator<Inve
                     case 0:
                         // Check to make sure the client isn't spamming interaction
                         // Based on Nukkit 1.0, with changes to ensure holding down still works
-                        boolean hasAlreadyClicked = System.currentTimeMillis() - session.getLastInteractionTime() < 110.0 &&
-                                packet.getBlockPosition().distanceSquared(session.getLastInteractionBlockPosition()) < 0.00001;
+                        long currentTimestamp = System.currentTimeMillis();
+                        boolean hasAlreadyClicked;
+                        if (session.getLastArmSwing() != -1L && currentTimestamp - session.getLastArmSwing() < 50) {
+                            // Especially on older server software, having an arm swing while placing blocks is rather important
+                            // Or else block placements can fail. If the client has sent a recent arm swing, apply that
+                            hasAlreadyClicked = false;
+                            session.setLastArmSwing(-1L);
+                        } else if (currentTimestamp - session.getLastBlockPlaceSendAttempt() >= 200) {
+                            // Maximum threshold reached - send a packet
+                            // This can happen when the player is holding down - 200 ms is the 1.16.5 Java equivalent
+                            hasAlreadyClicked = false;
+                        } else {
+                            // Just check to make sure packets aren't being spammed
+                            // Otherwise, rapid, intentional spam clicking is in play
+                            hasAlreadyClicked = currentTimestamp - session.getLastInteractionTime() < 50;
+                        }
+
                         session.setLastInteractionBlockPosition(packet.getBlockPosition());
                         session.setLastInteractionPlayerPosition(session.getPlayerEntity().getPosition());
+                        session.setLastInteractionTime(currentTimestamp);
                         if (hasAlreadyClicked) {
                             break;
-                        } else {
-                            // Only update the interaction time if it's valid - that way holding down still works.
-                            session.setLastInteractionTime(System.currentTimeMillis());
                         }
+                        session.setLastBlockPlaceSendAttempt(currentTimestamp);
 
                         // Bedrock sends block interact code for a Java entity so we send entity code back to Java
                         if (session.getBlockTranslator().isItemFrame(packet.getBlockRuntimeId()) &&

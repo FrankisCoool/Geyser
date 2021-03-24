@@ -314,6 +314,21 @@ public class GeyserSession implements CommandSender {
     private long lastInteractionTime;
 
     /**
+     * Compared to {@link #lastInteractionTime}, this details when the last packet send was as opposed to the last
+     * time the client sent a block place attempt our way.
+     */
+    @Setter
+    private long lastBlockPlaceSendAttempt;
+
+    /**
+     * Arm swings can be important to placing a block, depending on the server software. If there is a recent arm swing,
+     * take it into account when checking on the spam bug. <br>
+     * Set to -1 if no arm swing has been performed
+     */
+    @Setter
+    private long lastArmSwing = -1L;
+
+    /**
      * Stores a future interaction to place a bucket. Will be cancelled if the client instead intended to
      * interact with a block.
      */
