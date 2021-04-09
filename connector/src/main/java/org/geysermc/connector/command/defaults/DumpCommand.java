@@ -27,12 +27,14 @@ package org.geysermc.connector.command.defaults;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.geysermc.common.PlatformType;
 import org.geysermc.connector.GeyserConnector;
 import org.geysermc.connector.command.CommandSender;
 import org.geysermc.connector.command.GeyserCommand;
 import org.geysermc.connector.common.ChatColor;
 import org.geysermc.connector.common.serializer.AsteriskSerializer;
 import org.geysermc.connector.dump.DumpInfo;
+import org.geysermc.connector.network.session.GeyserSession;
 import org.geysermc.connector.utils.LanguageUtils;
 import org.geysermc.connector.utils.WebUtils;
 
@@ -54,7 +56,13 @@ public class DumpCommand extends GeyserCommand {
     }
 
     @Override
-    public void execute(CommandSender sender, String[] args) {
+    public void execute(GeyserSession session, CommandSender sender, String[] args) {
+        // Only allow the console to create dumps on Geyser Standalone
+        if (!sender.isConsole() && connector.getPlatformType() == PlatformType.STANDALONE) {
+            sender.sendMessage(LanguageUtils.getPlayerLocaleString("geyser.bootstrap.command.permission_fail", sender.getLocale()));
+            return;
+        }
+
         boolean showSensitive = false;
         boolean offlineDump = false;
         if (args.length >= 1) {

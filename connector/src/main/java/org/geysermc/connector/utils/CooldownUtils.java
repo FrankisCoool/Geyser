@@ -26,7 +26,7 @@
 package org.geysermc.connector.utils;
 
 import com.nukkitx.protocol.bedrock.packet.SetTitlePacket;
-import org.geysermc.connector.GeyserConnector;
+import lombok.Getter;
 import org.geysermc.connector.network.session.GeyserSession;
 
 import java.util.concurrent.TimeUnit;
@@ -36,11 +36,10 @@ import java.util.concurrent.TimeUnit;
  * Much of the work here is from the wonderful folks from ViaRewind: https://github.com/ViaVersion/ViaRewind
  */
 public class CooldownUtils {
+    private static CooldownType SHOW_COOLDOWN;
 
-    private final static boolean SHOW_COOLDOWN;
-
-    static {
-        SHOW_COOLDOWN = GeyserConnector.getInstance().getConfig().isShowCooldown();
+    public static void setShowCooldown(String showCooldown) {
+        SHOW_COOLDOWN = CooldownType.getByName(showCooldown);
     }
 
     /**
@@ -48,7 +47,7 @@ public class CooldownUtils {
      * @param session GeyserSession
      */
     public static void sendCooldown(GeyserSession session) {
-        if (!SHOW_COOLDOWN) return;
+        if (SHOW_COOLDOWN == CooldownType.DISABLED) return;
         if (session.getAttackSpeed() == 0.0 || session.getAttackSpeed() > 20) return; // 0.0 usually happens on login and causes issues with visuals; anything above 20 means a plugin like OldCombatMechanics is being used
         // Needs to be sent or no subtitle packet is recognized by the client
         SetTitlePacket titlePacket = new SetTitlePacket();
@@ -69,7 +68,11 @@ public class CooldownUtils {
         if (session.isClosed()) return; // Don't run scheduled tasks if the client left
         if (lastHitTime != session.getLastHitTime()) return; // Means another cooldown has started so there's no need to continue this one
         SetTitlePacket titlePacket = new SetTitlePacket();
-        titlePacket.setType(SetTitlePacket.Type.SUBTITLE);
+        if (SHOW_COOLDOWN == CooldownType.ACTIONBAR) {
+            titlePacket.setType(SetTitlePacket.Type.ACTIONBAR);
+        } else {
+            titlePacket.setType(SetTitlePacket.Type.SUBTITLE);
+        }
         titlePacket.setText(getTitle(session));
         titlePacket.setFadeInTime(0);
         titlePacket.setFadeOutTime(5);
@@ -79,7 +82,11 @@ public class CooldownUtils {
             session.getConnector().getGeneralThreadPool().schedule(() -> computeCooldown(session, lastHitTime), 50, TimeUnit.MILLISECONDS); // Updated per tick. 1000 divided by 20 ticks equals 50
         } else {
             SetTitlePacket removeTitlePacket = new SetTitlePacket();
-            removeTitlePacket.setType(SetTitlePacket.Type.SUBTITLE);
+            if (SHOW_COOLDOWN == CooldownType.ACTIONBAR) {
+                removeTitlePacket.setType(SetTitlePacket.Type.ACTIONBAR);
+            } else {
+                removeTitlePacket.setType(SetTitlePacket.Type.SUBTITLE);
+            }
             removeTitlePacket.setText(" ");
             session.sendUpstreamPacket(removeTitlePacket);
         }
@@ -117,4 +124,32 @@ public class CooldownUtils {
         return builder.toString();
     }
 
+    @Getter
+    public enum CooldownType {
+        TITLE,
+        ACTIONBAR,
+        DISABLED;
+
+        public static final CooldownType[] VALUES = values();
+
+        /**
+         * Convert the CooldownType string (from config) to the enum, TITLE on fail
+         *
+         * @param name CooldownType string
+         *
+         * @return The converted CooldownType
+         */
+        public static CooldownType getByName(String name) {
+            if (name.equalsIgnoreCase("true")) { // Backwards config compatibility
+                return CooldownType.TITLE;
+            }
+
+            for (CooldownType type : VALUES) {
+                if (type.name().equalsIgnoreCase(name)) {
+                    return type;
+                }
+            }
+            return DISABLED;
+        }
+    }
 }
