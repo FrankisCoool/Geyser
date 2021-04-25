@@ -31,18 +31,12 @@ import com.github.steveice10.mc.protocol.data.game.entity.player.Hand;
 import com.github.steveice10.mc.protocol.data.game.entity.player.InteractAction;
 import com.github.steveice10.mc.protocol.data.game.entity.player.PlayerAction;
 import com.github.steveice10.mc.protocol.data.game.world.block.BlockFace;
-import com.github.steveice10.mc.protocol.packet.ingame.client.player.ClientPlayerActionPacket;
-import com.github.steveice10.mc.protocol.packet.ingame.client.player.ClientPlayerInteractEntityPacket;
-import com.github.steveice10.mc.protocol.packet.ingame.client.player.ClientPlayerPlaceBlockPacket;
-import com.github.steveice10.mc.protocol.packet.ingame.client.player.ClientPlayerUseItemPacket;
+import com.github.steveice10.mc.protocol.packet.ingame.client.player.*;
 import com.nukkitx.math.vector.Vector3f;
 import com.nukkitx.math.vector.Vector3i;
 import com.nukkitx.protocol.bedrock.data.LevelEventType;
 import com.nukkitx.protocol.bedrock.data.entity.EntityFlags;
-import com.nukkitx.protocol.bedrock.data.inventory.ContainerId;
-import com.nukkitx.protocol.bedrock.data.inventory.ContainerType;
-import com.nukkitx.protocol.bedrock.data.inventory.InventoryActionData;
-import com.nukkitx.protocol.bedrock.data.inventory.InventorySource;
+import com.nukkitx.protocol.bedrock.data.inventory.*;
 import com.nukkitx.protocol.bedrock.packet.*;
 import org.geysermc.connector.entity.CommandBlockMinecartEntity;
 import org.geysermc.connector.entity.Entity;
@@ -112,18 +106,26 @@ public class BedrockInventoryTransactionTranslator extends PacketTranslator<Inve
             case ITEM_USE:
                 switch (packet.getActionType()) {
                     case 0:
+                        long currentTimestamp = System.currentTimeMillis();
                         // Check to make sure the client isn't spamming interaction
                         // Based on Nukkit 1.0, with changes to ensure holding down still works
-                        boolean hasAlreadyClicked = System.currentTimeMillis() - session.getLastInteractionTime() < 110.0 &&
-                                packet.getBlockPosition().distanceSquared(session.getLastInteractionBlockPosition()) < 0.00001;
+                        boolean hasAlreadyClicked;
+                        if (currentTimestamp - session.getLastBlockPlaceTime() >= 200) {
+                            // Maximum threshold reached - send a packet
+                            // This can happen when the player is holding down - 200 ms is the 1.16.5 Java equivalent
+                            hasAlreadyClicked = false;
+                        } else {
+                            // Just check to make sure packets aren't being spammed
+                            // Otherwise, rapid, intentional spam clicking is in play
+                            hasAlreadyClicked = currentTimestamp - session.getLastInteractionTime() < 50;
+                        }
                         session.setLastInteractionBlockPosition(packet.getBlockPosition());
                         session.setLastInteractionPlayerPosition(session.getPlayerEntity().getPosition());
+                        session.setLastInteractionTime(currentTimestamp);
                         if (hasAlreadyClicked) {
                             break;
-                        } else {
-                            // Only update the interaction time if it's valid - that way holding down still works.
-                            session.setLastInteractionTime(System.currentTimeMillis());
                         }
+                        session.setLastBlockPlaceTime(currentTimestamp);
 
                         // Bedrock sends block interact code for a Java entity so we send entity code back to Java
                         if (session.getBlockTranslator().isItemFrame(packet.getBlockRuntimeId()) &&
@@ -183,58 +185,29 @@ public class BedrockInventoryTransactionTranslator extends PacketTranslator<Inve
                         Block place checks end - client is good to go
                          */
 
-                        ClientPlayerPlaceBlockPacket blockPacket = new ClientPlayerPlaceBlockPacket(
-                                new Position(packet.getBlockPosition().getX(), packet.getBlockPosition().getY(), packet.getBlockPosition().getZ()),
-                                BlockFace.values()[packet.getBlockFace()],
-                                Hand.MAIN_HAND,
-                                packet.getClickPosition().getX(), packet.getClickPosition().getY(), packet.getClickPosition().getZ(),
-                                false);
-                        session.sendDownstreamPacket(blockPacket);
-
-                        // Otherwise boats will not be able to be placed in survival and buckets won't work on mobile
-                        if (packet.getItemInHand() != null && ItemRegistry.BOATS.contains(packet.getItemInHand().getId())) {
-                            ClientPlayerUseItemPacket itemPacket = new ClientPlayerUseItemPacket(Hand.MAIN_HAND);
-                            session.sendDownstreamPacket(itemPacket);
-                        }
-                        // Check actions, otherwise buckets may be activated when block inventories are accessed
-                        else if (packet.getItemInHand() != null && ItemRegistry.BUCKETS.contains(packet.getItemInHand().getId())) {
-                            // Let the server decide if the bucket item should change, not the client, and revert the changes the client made
-                            InventorySlotPacket slotPacket = new InventorySlotPacket();
-                            slotPacket.setContainerId(ContainerId.INVENTORY);
-                            slotPacket.setSlot(packet.getHotbarSlot());
-                            slotPacket.setItem(packet.getItemInHand());
-                            session.sendUpstreamPacket(slotPacket);
-                            // Delay the interaction in case the client doesn't intend to actually use the bucket
-                            // See BedrockActionTranslator.java
-                            session.setBucketScheduledFuture(session.getConnector().getGeneralThreadPool().schedule(() -> {
-                                ClientPlayerUseItemPacket itemPacket = new ClientPlayerUseItemPacket(Hand.MAIN_HAND);
-                                session.sendDownstreamPacket(itemPacket);
-                            }, 5, TimeUnit.MILLISECONDS));
-                        }
-
-                        if (packet.getActions().isEmpty()) {
-                            if (session.getOpPermissionLevel() >= 2 && session.getGameMode() == GameMode.CREATIVE) {
-                                // Otherwise insufficient permissions
-                                int blockState = session.getBlockTranslator().getJavaBlockState(packet.getBlockRuntimeId());
-                                String blockName = BlockTranslator.getJavaIdBlockMap().inverse().getOrDefault(blockState, "");
-                                // In the future this can be used for structure blocks too, however not all elements
-                                // are available in each GUI
-                                if (blockName.contains("jigsaw")) {
-                                    ContainerOpenPacket openPacket = new ContainerOpenPacket();
-                                    openPacket.setBlockPosition(packet.getBlockPosition());
-                                    openPacket.setId((byte) 1);
-                                    openPacket.setType(ContainerType.JIGSAW_EDITOR);
-                                    openPacket.setUniqueEntityId(-1);
-                                    session.sendUpstreamPacket(openPacket);
-                                }
-                            }
-                        }
-
+                        ItemData itemData = packet.getItemInHand();
                         ItemEntry handItem = ItemRegistry.getItem(packet.getItemInHand());
+                        boolean hasSwungArm = session.getArmSwingScheduledFuture() != null;
+
+                        sendBlockPlacePackets(session, Hand.MAIN_HAND, itemData, packet);
+
+                        if (session.getPlayerInventory().getItemInHand().isEmpty() ||
+                                (!hasSwungArm && packet.getActions().isEmpty() && !handItem.isBlock())) {
+                            // See if the offhand item could be used as an item transaction
+                            // If the main hand was already used, then we probably shouldn't send the packet
+                            // But otherwise, the offhand is game
+                            handItem = session.getPlayerInventory().getOffhand().getItemEntry();
+                            sendBlockPlacePackets(session, Hand.OFF_HAND,
+                                    session.getPlayerInventory().getOffhand().getItemData(session), packet);
+                        }
+
                         if (handItem.isBlock()) {
+                            // Save block information for making block place sounds
+                            // We are given no information on if this interaction should place a block
                             session.setLastBlockPlacePosition(blockPos);
                             session.setLastBlockPlacedId(handItem.getJavaIdentifier());
                         }
+
                         session.setInteracting(true);
                         break;
                     case 1:
@@ -332,20 +305,73 @@ public class BedrockInventoryTransactionTranslator extends PacketTranslator<Inve
                         EntitySoundInteractionHandler.handleEntityInteraction(session, vector, entity);
                         break;
                     case 1: //Attack
+                        int entityId = (int) entity.getEntityId();
                         if (entity.getEntityType() == EntityType.ENDER_DRAGON) {
                             // Redirects the attack to its body entity, this only happens when
                             // attacking the underbelly of the ender dragon
-                            ClientPlayerInteractEntityPacket attackPacket = new ClientPlayerInteractEntityPacket((int) entity.getEntityId() + 3,
-                                    InteractAction.ATTACK, session.isSneaking());
-                            session.sendDownstreamPacket(attackPacket);
-                        } else {
-                            ClientPlayerInteractEntityPacket attackPacket = new ClientPlayerInteractEntityPacket((int) entity.getEntityId(),
-                                    InteractAction.ATTACK, session.isSneaking());
-                            session.sendDownstreamPacket(attackPacket);
+                            entityId += 3;
                         }
+                        ClientPlayerInteractEntityPacket attackPacket = new ClientPlayerInteractEntityPacket(entityId,
+                                InteractAction.ATTACK, session.isSneaking());
+                        session.sendDownstreamPacket(attackPacket);
                         break;
                 }
                 break;
+        }
+    }
+
+    private void sendBlockPlacePackets(GeyserSession session, Hand hand, ItemData itemData, InventoryTransactionPacket packet) {
+        ClientPlayerPlaceBlockPacket blockPacket = new ClientPlayerPlaceBlockPacket(
+                new Position(packet.getBlockPosition().getX(), packet.getBlockPosition().getY(), packet.getBlockPosition().getZ()),
+                BlockFace.values()[packet.getBlockFace()],
+                hand,
+                packet.getClickPosition().getX(), packet.getClickPosition().getY(), packet.getClickPosition().getZ(),
+                false);
+        session.sendDownstreamPacket(blockPacket);
+
+        if (hand == Hand.OFF_HAND && itemData.getId() != 0) {
+            // Bedrock isn't going to do this for us
+            ClientPlayerSwingArmPacket swingArmPacket = new ClientPlayerSwingArmPacket(Hand.OFF_HAND);
+            session.sendDownstreamPacket(swingArmPacket);
+        }
+
+        // Otherwise boats will not be able to be placed in survival and buckets won't work on mobile
+        if (packet.getItemInHand() != null && ItemRegistry.BOATS.contains(itemData.getId())) {
+            ClientPlayerUseItemPacket itemPacket = new ClientPlayerUseItemPacket(hand);
+            session.sendDownstreamPacket(itemPacket);
+        }
+        // Check actions, otherwise buckets may be activated when block inventories are accessed
+        else if (packet.getItemInHand() != null && ItemRegistry.BUCKETS.contains(itemData.getId())) {
+            // Let the server decide if the bucket item should change, not the client, and revert the changes the client made
+            InventorySlotPacket slotPacket = new InventorySlotPacket();
+            slotPacket.setContainerId(ContainerId.INVENTORY);
+            slotPacket.setSlot(packet.getHotbarSlot());
+            slotPacket.setItem(packet.getItemInHand());
+            session.sendUpstreamPacket(slotPacket);
+            // Delay the interaction in case the client doesn't intend to actually use the bucket
+            // See BedrockActionTranslator.java
+            session.setBucketScheduledFuture(session.getConnector().getGeneralThreadPool().schedule(() -> {
+                ClientPlayerUseItemPacket itemPacket = new ClientPlayerUseItemPacket(hand);
+                session.sendDownstreamPacket(itemPacket);
+            }, 5, TimeUnit.MILLISECONDS));
+        }
+
+        if (packet.getActions().isEmpty()) {
+            if (session.getOpPermissionLevel() >= 2 && session.getGameMode() == GameMode.CREATIVE) {
+                // Otherwise insufficient permissions
+                int blockState = session.getBlockTranslator().getJavaBlockState(packet.getBlockRuntimeId());
+                String blockName = BlockTranslator.getJavaIdBlockMap().inverse().getOrDefault(blockState, "");
+                // In the future this can be used for structure blocks too, however not all elements
+                // are available in each GUI
+                if (blockName.contains("jigsaw")) {
+                    ContainerOpenPacket openPacket = new ContainerOpenPacket();
+                    openPacket.setBlockPosition(packet.getBlockPosition());
+                    openPacket.setId((byte) 1);
+                    openPacket.setType(ContainerType.JIGSAW_EDITOR);
+                    openPacket.setUniqueEntityId(-1);
+                    session.sendUpstreamPacket(openPacket);
+                }
+            }
         }
     }
 

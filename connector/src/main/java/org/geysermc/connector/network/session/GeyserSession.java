@@ -340,7 +340,16 @@ public class GeyserSession implements CommandSender {
      * See https://github.com/GeyserMC/Geyser/issues/503 for context.
      */
     @Setter
-    private long lastInteractionTime;
+    private long lastInteractionTime = System.currentTimeMillis();
+
+    @Setter
+    private long lastBlockPlaceTime = System.currentTimeMillis();
+
+    /**
+     * Stores a future arm swing to send to the client. Used for offhand checking and better block placement
+     */
+    @Setter
+    private ScheduledFuture<?> armSwingScheduledFuture;
 
     /**
      * Stores a future interaction to place a bucket. Will be cancelled if the client instead intended to

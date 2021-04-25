@@ -48,11 +48,10 @@ public class BedrockAnimateTranslator extends PacketTranslator<AnimatePacket> {
         switch (packet.getAction()) {
             case SWING_ARM:
                 // Delay so entity damage can be processed first
-                session.getConnector().getGeneralThreadPool().schedule(() ->
-                        session.sendDownstreamPacket(new ClientPlayerSwingArmPacket(Hand.MAIN_HAND)),
-                        25,
-                        TimeUnit.MILLISECONDS
-                );
+                session.setArmSwingScheduledFuture(session.getConnector().getGeneralThreadPool().schedule(() -> {
+                    session.sendDownstreamPacket(new ClientPlayerSwingArmPacket(Hand.MAIN_HAND));
+                    session.setArmSwingScheduledFuture(null);
+                }, 25, TimeUnit.MILLISECONDS));
                 break;
             // These two might need to be flipped, but my recommendation is getting moving working first
             case ROW_LEFT:
